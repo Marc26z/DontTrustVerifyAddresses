@@ -1,0 +1,2857 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>DontTrustVerifyAddresses — Offline Bitcoin Address Generator</title>
+<style>
+:root {
+  --bg: #08050c;
+  --bg-soft: #0f0916;
+  --panel: rgba(23, 15, 33, 0.88);
+  --panel-solid: #171020;
+  --panel-raised: #1d142a;
+  --line: #342045;
+  --line-strong: #4b2d63;
+  --text: #f7f1ff;
+  --muted: #b9a8ca;
+  --muted-2: #88779c;
+  --purple: #a855f7;
+  --purple-bright: #c084fc;
+  --purple-deep: #6d28d9;
+  --orange: #fb923c;
+  --orange-bright: #fdba74;
+  --orange-deep: #ea580c;
+  --green: #34d399;
+  --red: #fb7185;
+  --amber: #fbbf24;
+  --radius: 18px;
+  --radius-sm: 12px;
+  --shadow: 0 28px 80px rgba(0, 0, 0, 0.42);
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text);
+  background:
+    radial-gradient(1100px 700px at 15% -10%, rgba(109, 40, 217, 0.22), transparent 62%),
+    radial-gradient(900px 600px at 100% 18%, rgba(234, 88, 12, 0.12), transparent 60%),
+    linear-gradient(180deg, #08050c 0%, #0b0710 45%, #08050c 100%);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.16;
+  background-image:
+    linear-gradient(rgba(168, 85, 247, 0.13) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168, 85, 247, 0.13) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to bottom, black, transparent 78%);
+  z-index: 0;
+}
+.bg-glow {
+  position: fixed;
+  border-radius: 999px;
+  filter: blur(90px);
+  pointer-events: none;
+  opacity: 0.25;
+  z-index: 0;
+}
+.bg-glow-a { width: 420px; height: 420px; background: #7c3aed; top: 6%; left: -180px; }
+.bg-glow-b { width: 360px; height: 360px; background: #ea580c; right: -160px; top: 42%; opacity: 0.16; }
+
+.shell { width: min(1160px, calc(100% - 40px)); margin: 0 auto; position: relative; z-index: 1; }
+a { color: var(--purple-bright); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }
+
+.site-header {
+  position: relative;
+  z-index: 10;
+  padding: 22px 0 8px;
+}
+.header-inner { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.brand { display: inline-flex; align-items: center; gap: 12px; color: var(--text); font-weight: 800; letter-spacing: -0.035em; font-size: 19px; }
+.brand:hover { text-decoration: none; }
+.brand-mark { width: 42px; height: 42px; display: grid; place-items: center; filter: drop-shadow(0 0 18px rgba(168, 85, 247, 0.25)); }
+.brand-mark svg { width: 42px; height: 42px; }
+.brand-accent { background: linear-gradient(90deg, var(--purple-bright), var(--orange)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.offline-pill {
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 8px 13px; border: 1px solid rgba(52, 211, 153, 0.22);
+  border-radius: 999px; background: rgba(16, 185, 129, 0.07);
+  color: #a7f3d0; font-size: 12px; font-weight: 700; letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.12), 0 0 14px rgba(52, 211, 153, 0.7); }
+
+.hero { padding: 70px 0 38px; max-width: 860px; }
+.eyebrow, .section-kicker {
+  display: inline-flex; align-items: center; gap: 9px;
+  color: var(--orange-bright); font-size: 11px; font-weight: 800;
+  letter-spacing: 0.18em; text-transform: uppercase;
+}
+.eyebrow-line { width: 28px; height: 1px; background: linear-gradient(90deg, var(--orange), transparent); }
+.hero h1 {
+  margin: 18px 0 18px;
+  font-size: clamp(44px, 7vw, 82px);
+  line-height: 0.98;
+  letter-spacing: -0.065em;
+  font-weight: 850;
+}
+.grad-text { background: linear-gradient(100deg, var(--purple-bright) 0%, #e879f9 32%, var(--orange) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero-lede { margin: 0; max-width: 760px; color: var(--muted); font-size: clamp(16px, 1.7vw, 19px); line-height: 1.65; }
+.hero-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+.hero-chips span {
+  padding: 6px 11px; border: 1px solid var(--line); border-radius: 999px;
+  background: rgba(168, 85, 247, 0.055); color: #d8c6e8; font-size: 12px; font-weight: 650;
+}
+
+.privacy-card {
+  display: flex; gap: 16px; align-items: flex-start;
+  padding: 20px 22px; margin: 0 0 32px;
+  border: 1px solid rgba(251, 146, 60, 0.28);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.10), rgba(124, 58, 237, 0.08) 55%, rgba(23, 16, 32, 0.7));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.privacy-icon { flex: 0 0 auto; width: 34px; height: 34px; color: var(--orange-bright); margin-top: 2px; }
+.privacy-icon svg { width: 34px; height: 34px; }
+.privacy-card h2 { margin: 0 0 5px; font-size: 17px; letter-spacing: -0.02em; }
+.privacy-card p { margin: 0; color: var(--muted); font-size: 14px; max-width: 980px; }
+.privacy-card .privacy-sub { margin-top: 7px; color: #d6c7e5; font-size: 13px; }
+.privacy-card strong { color: var(--orange-bright); }
+
+.workspace {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius) + 6px);
+  background: linear-gradient(180deg, rgba(29, 20, 42, 0.92), rgba(19, 12, 28, 0.94));
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.workspace::before {
+  content: ""; position: absolute; inset: 0 0 auto; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(192, 132, 252, 0.7), rgba(251, 146, 60, 0.6), transparent);
+}
+.workspace-top {
+  display: flex; justify-content: space-between; align-items: center; gap: 18px;
+  padding: 22px 24px 14px; border-bottom: 1px solid rgba(52, 32, 69, 0.72);
+  flex-wrap: wrap;
+}
+.mode-tabs { display: flex; gap: 8px; padding: 5px; background: rgba(8, 5, 12, 0.6); border: 1px solid var(--line); border-radius: 15px; }
+.mode-tab {
+  display: flex; align-items: center; gap: 11px; border: 0; border-radius: 11px;
+  padding: 10px 14px; background: transparent; color: var(--muted);
+  text-align: left; transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+.mode-tab:hover { color: var(--text); background: rgba(168, 85, 247, 0.08); }
+.mode-tab.is-active { background: linear-gradient(135deg, rgba(168, 85, 247, 0.22), rgba(251, 146, 60, 0.10)); color: var(--text); box-shadow: inset 0 0 0 1px rgba(192, 132, 252, 0.25); }
+.tab-icon {
+  display: grid; place-items: center; min-width: 36px; height: 36px; padding: 0 7px;
+  border: 1px solid var(--line-strong); border-radius: 10px;
+  background: rgba(8, 5, 12, 0.38); color: var(--purple-bright);
+  font-family: var(--mono); font-size: 12px; font-weight: 800;
+}
+.mode-tab strong { display: block; font-size: 13px; letter-spacing: -0.01em; }
+.mode-tab small { display: block; margin-top: 2px; color: var(--muted-2); font-size: 11px; font-weight: 550; }
+.top-tools { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; }
+.mini-field { display: flex; flex-direction: column; gap: 5px; color: var(--muted-2); font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.mini-field select, .mini-field input {
+  min-width: 102px; padding: 8px 11px; border-radius: 10px;
+  border: 1px solid var(--line); background: #110b19; color: var(--text);
+  font-size: 13px; font-weight: 650; letter-spacing: 0; text-transform: none;
+}
+.import-note { margin: 0; padding: 10px 24px 0; color: var(--muted-2); font-size: 12px; }
+
+.wallet-panel { padding: 26px 24px 8px; }
+.panel-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 22px; flex-wrap: wrap; }
+.panel-heading h2 { margin: 5px 0 0; font-size: clamp(22px, 3vw, 30px); line-height: 1.15; letter-spacing: -0.04em; }
+.path-pill {
+  display: flex; align-items: center; gap: 9px; max-width: 100%;
+  padding: 8px 11px; border: 1px solid var(--line); border-radius: 10px;
+  background: rgba(8, 5, 12, 0.42); color: var(--muted-2); font-size: 10px;
+  font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+}
+.path-pill code { color: #e9d5ff; font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; overflow-wrap: anywhere; }
+
+.source-switch { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+.source-option {
+  display: flex; align-items: center; gap: 10px; padding: 11px 14px;
+  border: 1px solid var(--line); border-radius: 12px; background: rgba(8, 5, 12, 0.3);
+  cursor: pointer; transition: border-color 150ms ease, background 150ms ease;
+}
+.source-option:hover { border-color: var(--line-strong); background: rgba(168, 85, 247, 0.06); }
+.source-option:has(input:checked) { border-color: rgba(192, 132, 252, 0.7); background: linear-gradient(135deg, rgba(168, 85, 247, 0.16), rgba(251, 146, 60, 0.07)); }
+.source-option input { accent-color: var(--purple); }
+.source-option strong { display: block; font-size: 13px; }
+.source-option small { display: block; color: var(--muted-2); font-size: 11px; }
+
+.field-stack { display: flex; flex-direction: column; gap: 7px; margin-bottom: 18px; }
+.field-label, .field > span { color: #e9ddf5; font-size: 12px; font-weight: 750; letter-spacing: 0.01em; }
+.field-hint { margin: 0; color: var(--muted-2); font-size: 12px; line-height: 1.55; }
+.field-hint code, .help code { padding: 1px 5px; border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 5px; background: rgba(168, 85, 247, 0.08); color: #e9d5ff; font-family: var(--mono); font-size: 0.92em; overflow-wrap: anywhere; }
+.warn-hint { color: #fdba74; }
+.optional { color: var(--muted-2); font-weight: 500; }
+
+input[type="text"], input[type="number"], input[type="password"], select, textarea {
+  width: 100%; padding: 11px 12px;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: #100a18; color: var(--text);
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+textarea { resize: vertical; min-height: 82px; line-height: 1.5; }
+input:hover, select:hover, textarea:hover { border-color: var(--line-strong); }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--purple); box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.16); background: #130c1d; }
+.mono-input { font-family: var(--mono); font-size: 13px; word-break: break-all; }
+.field-row { display: flex; flex-direction: column; gap: 5px; margin-top: 3px; }
+.field-row input { max-width: 420px; }
+
+.field-group { margin: 22px 0; }
+.field-group > .field-label { display: block; margin-bottom: 9px; }
+.type-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.type-grid-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.type-card { position: relative; cursor: pointer; }
+.type-card input { position: absolute; opacity: 0; pointer-events: none; }
+.type-card-body {
+  display: flex; flex-direction: column; gap: 3px; height: 100%;
+  padding: 13px 13px 12px; border: 1px solid var(--line); border-radius: 12px;
+  background: rgba(8, 5, 12, 0.28); transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
+}
+.type-card:hover .type-card-body { border-color: var(--line-strong); background: rgba(168, 85, 247, 0.055); transform: translateY(-1px); }
+.type-card input:checked + .type-card-body { border-color: rgba(192, 132, 252, 0.72); background: linear-gradient(145deg, rgba(168, 85, 247, 0.18), rgba(251, 146, 60, 0.075)); box-shadow: inset 0 0 0 1px rgba(192, 132, 252, 0.14); }
+.type-name { font-size: 13px; font-weight: 800; letter-spacing: -0.01em; }
+.type-code { color: var(--muted); font-size: 11px; font-family: var(--mono); }
+.type-path { margin-top: auto; padding-top: 8px; color: var(--orange-bright); font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.type-card input:focus-visible + .type-card-body { outline: 2px solid var(--orange); outline-offset: 3px; }
+
+.number-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field input, .field select { font-family: var(--mono); font-size: 13px; }
+.threshold-wrap { display: flex; align-items: center; gap: 10px; }
+.threshold-wrap input { width: 94px; }
+.threshold-of { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.threshold-of strong { color: var(--orange-bright); }
+
+.advanced { margin: 22px 0 6px; border-top: 1px solid rgba(52, 32, 69, 0.75); padding-top: 14px; }
+.advanced summary { width: fit-content; cursor: pointer; color: var(--muted); font-size: 12px; font-weight: 750; list-style: none; padding: 4px 0; }
+.advanced summary::-webkit-details-marker { display: none; }
+.advanced summary::before { content: "+"; display: inline-block; width: 18px; color: var(--orange-bright); }
+.advanced[open] summary::before { content: "−"; }
+.advanced-body { padding: 14px 0 2px; display: flex; flex-direction: column; gap: 12px; }
+.advanced-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.check-line { display: flex; align-items: flex-start; gap: 9px; color: var(--muted); font-size: 13px; cursor: pointer; }
+.check-line input { margin-top: 3px; accent-color: var(--purple); }
+
+.cosigner-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; margin-bottom: 10px; flex-wrap: wrap; }
+.cosigner-head .field-hint { margin-top: 4px; max-width: 760px; }
+.cosigner-list { display: flex; flex-direction: column; gap: 9px; margin-bottom: 18px; }
+.cosigner-row {
+  display: grid; grid-template-columns: 38px minmax(120px, 170px) 1fr 34px; align-items: center; gap: 9px;
+  padding: 10px; border: 1px solid var(--line); border-radius: 12px;
+  background: rgba(8, 5, 12, 0.28);
+}
+.cosigner-number { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--line-strong); border-radius: 9px; color: var(--orange-bright); font-family: var(--mono); font-size: 11px; font-weight: 800; }
+.cosigner-row input { min-width: 0; }
+.cosigner-row .cosigner-label { font-size: 12px; }
+.cosigner-row .cosigner-key { font-family: var(--mono); font-size: 12px; }
+.remove-cosigner {
+  display: grid; place-items: center; width: 32px; height: 32px; padding: 0;
+  border: 1px solid transparent; border-radius: 9px; background: transparent;
+  color: var(--muted-2); font-size: 20px; line-height: 1;
+}
+.remove-cosigner:hover { border-color: rgba(251, 113, 133, 0.35); background: rgba(251, 113, 133, 0.08); color: var(--red); }
+.remove-cosigner:disabled { opacity: 0.25; cursor: not-allowed; }
+.multisig-settings { display: flex; align-items: flex-end; gap: 28px; margin: 18px 0 4px; flex-wrap: wrap; }
+.sorted-line { padding-bottom: 10px; }
+
+.generate-bar {
+  display: flex; justify-content: space-between; align-items: center; gap: 22px;
+  margin: 18px 0 0; padding: 20px 24px 22px;
+  border-top: 1px solid rgba(52, 32, 69, 0.78);
+  background: linear-gradient(90deg, rgba(168, 85, 247, 0.055), rgba(251, 146, 60, 0.035));
+}
+.generate-copy p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+.generate-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px 15px; border: 1px solid var(--line); border-radius: 11px;
+  background: rgba(168, 85, 247, 0.07); color: var(--text);
+  font-size: 13px; font-weight: 750; letter-spacing: -0.01em;
+  transition: transform 150ms ease, border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+.btn svg { width: 17px; height: 17px; }
+.btn:hover { transform: translateY(-1px); border-color: var(--line-strong); background: rgba(168, 85, 247, 0.12); }
+.btn:active { transform: translateY(0); }
+.btn:disabled { opacity: 0.42; cursor: not-allowed; transform: none; }
+.btn-primary {
+  border-color: transparent;
+  background: linear-gradient(115deg, #8b5cf6, #a855f7 45%, #fb923c 115%);
+  color: #170d20; box-shadow: 0 10px 28px rgba(168, 85, 247, 0.24), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+.btn-primary:hover { background: linear-gradient(115deg, #9d6bff, #c084fc 45%, #fdba74 115%); box-shadow: 0 14px 34px rgba(168, 85, 247, 0.32); }
+.btn-quiet { background: rgba(255, 255, 255, 0.035); color: #eadcf8; }
+.btn-small { padding: 8px 11px; border-radius: 9px; font-size: 12px; }
+.btn-link { border: 0; background: transparent; color: var(--purple-bright); padding: 0; }
+
+.progress-wrap { padding: 0 24px 20px; }
+.progress-track { height: 7px; border-radius: 999px; background: rgba(8, 5, 12, 0.7); border: 1px solid var(--line); overflow: hidden; }
+.progress-bar { height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--purple), #e879f9, var(--orange)); transition: width 120ms linear; box-shadow: 0 0 18px rgba(192, 132, 252, 0.5); }
+.progress-meta { display: flex; justify-content: space-between; gap: 10px; margin-top: 7px; color: var(--muted-2); font-size: 11px; font-family: var(--mono); }
+.error-box {
+  margin: 0 24px 20px; padding: 12px 14px;
+  border: 1px solid rgba(251, 113, 133, 0.38); border-radius: 11px;
+  background: rgba(251, 113, 133, 0.09); color: #fecdd3; font-size: 13px;
+}
+.error-box strong { color: #fff1f2; }
+
+.results {
+  margin: 28px 0 0;
+  border: 1px solid var(--line); border-radius: calc(var(--radius) + 4px);
+  background: linear-gradient(180deg, rgba(27, 18, 40, 0.92), rgba(17, 11, 25, 0.94));
+  box-shadow: var(--shadow); overflow: hidden;
+}
+.results-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 22px; padding: 22px 24px 14px; flex-wrap: wrap; }
+.results-head h2 { margin: 4px 0 8px; font-size: 26px; letter-spacing: -0.04em; }
+.result-meta { display: flex; flex-wrap: wrap; gap: 7px; }
+.result-meta span {
+  padding: 5px 9px; border: 1px solid var(--line); border-radius: 999px;
+  background: rgba(168, 85, 247, 0.07); color: #ddcbed; font-size: 11px; font-weight: 650;
+}
+.result-meta span.accent { border-color: rgba(251, 146, 60, 0.28); color: var(--orange-bright); background: rgba(251, 146, 60, 0.07); }
+.result-actions { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; }
+.export-format select { min-width: 142px; }
+.result-note { margin: 0 24px 14px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.result-note code { color: #e9d5ff; font-family: var(--mono); }
+.table-wrap { max-height: 640px; overflow: auto; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: rgba(8, 5, 12, 0.25); }
+.address-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.address-table th {
+  position: sticky; top: 0; z-index: 2; padding: 10px 14px;
+  background: #1b1226; color: var(--muted-2); text-align: left;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+}
+.address-table th:nth-child(1), .address-table td:nth-child(1) { width: 74px; }
+.address-table th:nth-child(2), .address-table td:nth-child(2) { width: 30%; }
+.address-table td { padding: 10px 14px; border-bottom: 1px solid rgba(52, 32, 69, 0.52); color: #e8ddf2; font-size: 12px; }
+.address-table tr:last-child td { border-bottom: 0; }
+.address-table tr:hover td { background: rgba(168, 85, 247, 0.045); }
+.address-table td:first-child { color: var(--orange-bright); font-family: var(--mono); font-size: 11px; }
+.path-cell { color: var(--muted) !important; font-family: var(--mono); font-size: 11px !important; overflow-wrap: anywhere; }
+.address-cell { font-family: var(--mono); font-size: 12px !important; overflow-wrap: anywhere; }
+.address-cell button { width: 100%; border: 0; background: transparent; color: #f2e8fb; font: inherit; text-align: left; padding: 0; }
+.address-cell button:hover { color: var(--orange-bright); }
+.preview-note { margin: 0; padding: 12px 24px 16px; color: var(--muted-2); font-size: 12px; }
+
+.help { margin: 34px 0 0; padding: 28px 0 10px; }
+.help-heading h2 { margin: 5px 0 20px; font-size: clamp(24px, 3.6vw, 34px); letter-spacing: -0.045em; }
+.help-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.help details { border: 1px solid var(--line); border-radius: 14px; background: rgba(23, 16, 32, 0.62); padding: 0 16px 15px; }
+.help summary { cursor: pointer; padding: 15px 0 11px; color: #f0e5fa; font-size: 13px; font-weight: 750; }
+.help summary::marker { color: var(--orange); }
+.help p { margin: 0 0 9px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.help p:last-child { margin-bottom: 0; }
+.help .btn { margin-top: 5px; }
+.site-footer { padding: 34px 0 38px; }
+.footer-inner { display: flex; justify-content: space-between; align-items: center; gap: 20px; border-top: 1px solid rgba(52, 32, 69, 0.72); padding-top: 22px; color: var(--muted-2); font-size: 12px; flex-wrap: wrap; }
+.footer-inner strong { display: block; color: #e9ddf5; font-size: 13px; }
+.footer-inner span { color: var(--muted-2); }
+.footer-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.footer-sep { color: var(--line-strong); }
+.link-button { border: 0; background: transparent; color: var(--purple-bright); padding: 0; font-size: 12px; font-weight: 750; }
+.link-button:hover { text-decoration: underline; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(10px);
+  z-index: 50; max-width: min(520px, calc(100% - 32px));
+  padding: 11px 15px; border: 1px solid rgba(192, 132, 252, 0.35); border-radius: 12px;
+  background: rgba(23, 16, 32, 0.96); color: #f4eaff; font-size: 13px; font-weight: 650;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45); opacity: 0; transition: opacity 180ms ease, transform 180ms ease;
+}
+.toast.is-visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.is-error { border-color: rgba(251, 113, 133, 0.45); color: #fecdd3; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+@media (max-width: 980px) {
+  .type-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .type-grid-three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .help-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .shell { width: min(100% - 24px, 1160px); }
+  .site-header { padding-top: 16px; }
+  .header-inner { align-items: flex-start; }
+  .brand { font-size: 17px; }
+  .brand-mark, .brand-mark svg { width: 36px; height: 36px; }
+  .hero { padding: 48px 0 28px; }
+  .hero h1 { font-size: clamp(38px, 13vw, 62px); }
+  .privacy-card { padding: 17px; }
+  .workspace-top { padding: 16px; align-items: flex-start; }
+  .mode-tabs { width: 100%; }
+  .mode-tab { flex: 1; }
+  .top-tools { width: 100%; justify-content: space-between; }
+  .wallet-panel { padding: 20px 16px 8px; }
+  .generate-bar { padding: 18px 16px; flex-direction: column; align-items: stretch; }
+  .generate-actions { justify-content: stretch; }
+  .generate-actions .btn-primary { flex: 1; }
+  .progress-wrap, .error-box { padding-left: 16px; padding-right: 16px; }
+  .error-box { margin-left: 16px; margin-right: 16px; }
+  .results-head { padding: 18px 16px 12px; }
+  .result-note, .preview-note { padding-left: 16px; padding-right: 16px; }
+  .result-note { margin-left: 0; margin-right: 0; }
+  .result-actions { width: 100%; }
+  .result-actions .mini-field { flex: 1; }
+  .result-actions .mini-field select { width: 100%; }
+  .address-table th:nth-child(2), .address-table td:nth-child(2) { width: 38%; }
+  .cosigner-row { grid-template-columns: 32px 1fr 32px; }
+  .cosigner-row .cosigner-label { grid-column: 2 / 3; }
+  .cosigner-row .cosigner-key { grid-column: 2 / 3; }
+  .cosigner-row .remove-cosigner { grid-column: 3 / 4; grid-row: 1 / 3; }
+  .cosigner-number { grid-row: 1 / 3; }
+  .number-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .multisig-settings { gap: 16px; }
+  .footer-inner { align-items: flex-start; flex-direction: column; }
+}
+@media (max-width: 470px) {
+  .brand-text { max-width: 190px; line-height: 1.1; }
+  .offline-pill { font-size: 10px; padding: 7px 9px; }
+  .type-grid, .type-grid-three { grid-template-columns: 1fr; }
+  .number-grid { grid-template-columns: 1fr; }
+  .mode-tab { padding: 9px 10px; }
+  .mode-tab small { display: none; }
+  .result-actions .btn { flex: 1; }
+  .address-table th:nth-child(2), .address-table td:nth-child(2) { display: none; }
+  .address-table th:nth-child(1), .address-table td:nth-child(1) { width: 52px; }
+}
+
+@media print {
+  .site-header, .hero, .privacy-card, .workspace, .help, .site-footer, .bg-glow, .toast { display: none !important; }
+  .results { display: block !important; border: 0; box-shadow: none; background: #fff; color: #000; }
+  .results-head { padding: 0; }
+  .result-actions, .preview-note, .result-note { display: none !important; }
+  .table-wrap { max-height: none; overflow: visible; border: 0; }
+  .address-table th { background: #eee; color: #000; }
+  .address-table td { color: #000; border-color: #ccc; }
+}
+
+</style>
+</head>
+<body>
+<div class="bg-glow bg-glow-a" aria-hidden="true"></div>
+<div class="bg-glow bg-glow-b" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="shell header-inner">
+    <a class="brand" href="#top" aria-label="DontTrustVerifyAddresses home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48" role="img">
+          <defs>
+            <linearGradient id="brandGrad" x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#a855f7"/>
+              <stop offset="1" stop-color="#fb923c"/>
+            </linearGradient>
+          </defs>
+          <path d="M24 3.5 41 10v11.7c0 10.4-6.9 18.4-17 22.8-10.1-4.4-17-12.4-17-22.8V10l17-6.5Z" fill="none" stroke="url(#brandGrad)" stroke-width="2.4"/>
+          <path d="m15.5 24.2 5.4 5.4 11.8-12.1" fill="none" stroke="url(#brandGrad)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="brand-text">DontTrust<span class="brand-accent">Verify</span>Addresses</span>
+    </a>
+    <div class="offline-pill" title="This page makes no network requests.">
+      <span class="status-dot" aria-hidden="true"></span>
+      Offline by design
+    </div>
+  </div>
+</header>
+
+<main id="top" class="shell">
+  <section class="hero">
+    <div class="eyebrow"><span class="eyebrow-line"></span> Bitcoin address laboratory</div>
+    <h1>Derive addresses.<br><span class="grad-text">Don't trust. Verify.</span></h1>
+    <p class="hero-lede">Generate printable Bitcoin addresses from single-signature accounts or multisig cosigner xpubs. Everything runs locally in this one HTML file — no servers, no trackers, no network calls.</p>
+    <div class="hero-chips" aria-label="Supported features">
+      <span>Legacy</span><span>Nested SegWit</span><span>Native SegWit</span><span>Taproot</span><span>Multisig 2–15 keys</span><span>1–10,000 addresses</span>
+    </div>
+  </section>
+
+  <section class="privacy-card" aria-labelledby="privacy-title">
+    <div class="privacy-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.4c0 4.8 3.2 8.5 7.5 10.6 4.3-2.1 7.5-5.8 7.5-10.6V6L12 3Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M9.2 12.1 11.3 14l3.8-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div>
+      <h2 id="privacy-title">Sensitive, but not secret — keep it private anyway.</h2>
+      <p>Bitcoin addresses and extended public keys (xpubs) cannot spend funds, but they reveal balances, transaction history, and wallet structure. Treat every generated text file as private. Do not publish it, paste it into social media, or attach it to email.</p>
+      <p class="privacy-sub">A BIP39 recovery phrase is different: it <strong>is secret</strong> and can spend funds. This page never stores or transmits anything, but only use a recovery phrase on a trusted, offline computer.</p>
+    </div>
+  </section>
+
+  <section class="workspace" aria-labelledby="workspace-title">
+    <div class="workspace-top">
+      <div class="mode-tabs" role="tablist" aria-label="Wallet type">
+        <button class="mode-tab is-active" id="tabSingle" type="button" role="tab" aria-selected="true" aria-controls="singlePanel" data-mode="single">
+          <span class="tab-icon" aria-hidden="true">1×</span>
+          <span><strong>Single signature</strong><small>One key, four address formats</small></span>
+        </button>
+        <button class="mode-tab" id="tabMulti" type="button" role="tab" aria-selected="false" aria-controls="multiPanel" data-mode="multi">
+          <span class="tab-icon" aria-hidden="true">m/n</span>
+          <span><strong>Multisig</strong><small>2–15 cosigner xpubs</small></span>
+        </button>
+      </div>
+      <div class="top-tools">
+        <label class="mini-field">
+          <span>Network</span>
+          <select id="networkSelect">
+            <option value="mainnet">Mainnet</option>
+            <option value="testnet">Testnet</option>
+          </select>
+        </label>
+        <button class="btn btn-quiet" id="importButton" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4m0 0L8 8m4-4 4 4M5 15v4h14v-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Load wallet file
+        </button>
+        <input id="fileInput" type="file" accept=".txt,.json,.bip39,.mnemonic,text/plain,application/json" hidden>
+      </div>
+    </div>
+    <p class="import-note" id="importNote">Wallet files are read locally. Supports plain text xpubs, a BIP39 backup file, or a JSON configuration.</p>
+
+    <form id="walletForm" novalidate>
+      <section id="singlePanel" class="wallet-panel" role="tabpanel" aria-labelledby="tabSingle">
+        <div class="panel-heading">
+          <div>
+            <span class="section-kicker">Single signature</span>
+            <h2>One key. Choose your address format.</h2>
+          </div>
+          <div class="path-pill" title="Derivation path template">
+            <span>Path</span><code id="singlePathDisplay">m/84'/0'/0'/0/{i}</code>
+          </div>
+        </div>
+
+        <div class="source-switch" role="radiogroup" aria-label="Key source">
+          <label class="source-option">
+            <input type="radio" name="singleSource" value="xpub" checked>
+            <span><strong>Account xpub</strong><small>Watch-only. Safer.</small></span>
+          </label>
+          <label class="source-option">
+            <input type="radio" name="singleSource" value="mnemonic">
+            <span><strong>Recovery phrase</strong><small>Secret. Offline use only.</small></span>
+          </label>
+        </div>
+
+        <div id="singleXpubWrap" class="field-stack">
+          <label class="field-label" for="singleXpub">Account extended public key</label>
+          <textarea id="singleXpub" class="mono-input" rows="3" spellcheck="false" autocomplete="off" placeholder="xpub6... / ypub6... / zpub6... / tpub..."></textarea>
+          <p class="field-hint">Use an account-level xpub, e.g. depth 3 for <code>m/84'/0'/0'</code>. SLIP-132 keys such as ypub and zpub are accepted; the address format is chosen below.</p>
+        </div>
+
+        <div id="singleMnemonicWrap" class="field-stack" hidden>
+          <label class="field-label" for="singleMnemonic">BIP39 recovery phrase</label>
+          <textarea id="singleMnemonic" class="mono-input" rows="3" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="twelve or twenty-four words separated by spaces"></textarea>
+          <div class="field-row">
+            <label class="field-label" for="singlePassphrase">BIP39 passphrase <span class="optional">(optional)</span></label>
+            <input id="singlePassphrase" type="password" autocomplete="off" spellcheck="false" placeholder="Leave blank if you did not set one">
+          </div>
+          <p class="field-hint warn-hint">A recovery phrase can spend your bitcoin. Check that you are offline and on a device you trust. The phrase never leaves this page and is not saved.</p>
+        </div>
+
+        <div class="field-group">
+          <span class="field-label">Address format</span>
+          <div class="type-grid" role="radiogroup" aria-label="Address format">
+            <label class="type-card">
+              <input type="radio" name="singleType" value="legacy">
+              <span class="type-card-body"><span class="type-name">Legacy</span><span class="type-code">P2PKH · 1…</span><span class="type-path">BIP44</span></span>
+            </label>
+            <label class="type-card">
+              <input type="radio" name="singleType" value="nested">
+              <span class="type-card-body"><span class="type-name">Nested SegWit</span><span class="type-code">P2SH-P2WPKH · 3…</span><span class="type-path">BIP49</span></span>
+            </label>
+            <label class="type-card">
+              <input type="radio" name="singleType" value="native" checked>
+              <span class="type-card-body"><span class="type-name">Native SegWit</span><span class="type-code">P2WPKH · bc1q…</span><span class="type-path">BIP84</span></span>
+            </label>
+            <label class="type-card">
+              <input type="radio" name="singleType" value="taproot">
+              <span class="type-card-body"><span class="type-name">Taproot</span><span class="type-code">P2TR · bc1p…</span><span class="type-path">BIP86</span></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="number-grid">
+          <label class="field"><span>Account</span><input id="singleAccount" type="number" min="0" max="2147483647" step="1" value="0" inputmode="numeric"></label>
+          <label class="field"><span>Chain</span><select id="singleChain"><option value="0">External · 0</option><option value="1">Internal / change · 1</option></select></label>
+          <label class="field"><span>Start index</span><input id="singleStart" type="number" min="0" max="2147483647" step="1" value="0" inputmode="numeric"></label>
+          <label class="field"><span>Addresses</span><input id="singleCount" type="number" min="1" max="10000" step="1" value="100" inputmode="numeric"></label>
+        </div>
+
+        <details class="advanced">
+          <summary>Advanced derivation</summary>
+          <div class="advanced-body">
+            <label class="check-line"><input id="singleCustomToggle" type="checkbox"> <span>Use a custom derivation path template</span></label>
+            <div id="singleCustomWrap" class="field-stack" hidden>
+              <label class="field-label" for="singleCustomPath">Path template</label>
+              <input id="singleCustomPath" class="mono-input" type="text" spellcheck="false" value="m/84'/0'/0'/0/{i}">
+              <p class="field-hint">The <code>{i}</code> component is replaced by each address index. Hardened components are allowed for recovery phrases but not after an xpub.</p>
+            </div>
+            <div class="advanced-actions">
+              <button class="btn btn-small btn-quiet" id="singleResetPath" type="button">Reset to default path</button>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section id="multiPanel" class="wallet-panel" role="tabpanel" aria-labelledby="tabMulti" hidden>
+        <div class="panel-heading">
+          <div>
+            <span class="section-kicker">Multisig</span>
+            <h2>Combine cosigner xpubs into one wallet.</h2>
+          </div>
+          <div class="path-pill" title="Derivation path template">
+            <span>Path</span><code id="multiPathDisplay">m/48'/0'/0'/2'/0/{i}</code>
+          </div>
+        </div>
+
+        <div class="cosigner-head">
+          <div>
+            <span class="field-label">Cosigner extended public keys</span>
+            <p class="field-hint">Paste each cosigner's xpub. Standard multisig wallets export these at a script-level path such as <code>m/48'/0'/0'/2'</code>.</p>
+          </div>
+          <button class="btn btn-small btn-quiet" id="addCosigner" type="button">+ Add cosigner</button>
+        </div>
+        <div id="cosignerList" class="cosigner-list"></div>
+
+        <div class="multisig-settings">
+          <label class="field threshold-field"><span>Required signatures</span><div class="threshold-wrap"><input id="multiThreshold" type="number" min="1" max="15" step="1" value="2" inputmode="numeric"><span class="threshold-of">of <strong id="multiThresholdOf">2</strong></span></div></label>
+          <label class="check-line sorted-line"><input id="multiSorted" type="checkbox" checked> <span>Sort public keys (BIP67)</span></label>
+        </div>
+
+        <div class="field-group">
+          <span class="field-label">Multisig format</span>
+          <div class="type-grid type-grid-three" role="radiogroup" aria-label="Multisig format">
+            <label class="type-card">
+              <input type="radio" name="multiType" value="legacy">
+              <span class="type-card-body"><span class="type-name">Legacy P2SH</span><span class="type-code">3…</span><span class="type-path">BIP48 / 0'</span></span>
+            </label>
+            <label class="type-card">
+              <input type="radio" name="multiType" value="nested">
+              <span class="type-card-body"><span class="type-name">Nested SegWit</span><span class="type-code">P2SH-P2WSH · 3…</span><span class="type-path">BIP48 / 1'</span></span>
+            </label>
+            <label class="type-card">
+              <input type="radio" name="multiType" value="native" checked>
+              <span class="type-card-body"><span class="type-name">Native SegWit</span><span class="type-code">P2WSH · bc1q…</span><span class="type-path">BIP48 / 2'</span></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="number-grid">
+          <label class="field"><span>Account</span><input id="multiAccount" type="number" min="0" max="2147483647" step="1" value="0" inputmode="numeric"></label>
+          <label class="field"><span>Chain</span><select id="multiChain"><option value="0">External · 0</option><option value="1">Internal / change · 1</option></select></label>
+          <label class="field"><span>Start index</span><input id="multiStart" type="number" min="0" max="2147483647" step="1" value="0" inputmode="numeric"></label>
+          <label class="field"><span>Addresses</span><input id="multiCount" type="number" min="1" max="10000" step="1" value="100" inputmode="numeric"></label>
+        </div>
+
+        <details class="advanced">
+          <summary>Advanced derivation</summary>
+          <div class="advanced-body">
+            <label class="check-line"><input id="multiCustomToggle" type="checkbox"> <span>Use a custom derivation path template</span></label>
+            <div id="multiCustomWrap" class="field-stack" hidden>
+              <label class="field-label" for="multiCustomPath">Path template</label>
+              <input id="multiCustomPath" class="mono-input" type="text" spellcheck="false" value="m/48'/0'/0'/2'/0/{i}">
+              <p class="field-hint">The <code>{i}</code> component is replaced by each address index. Hardened components can only be derived from a private source, not from an xpub.</p>
+            </div>
+            <div class="advanced-actions">
+              <button class="btn btn-small btn-quiet" id="multiResetPath" type="button">Reset to default path</button>
+            </div>
+            <p class="field-hint">Taproot multisig is not part of this generator. Use single-signature Taproot above, or a dedicated MuSig/script-tree tool.</p>
+          </div>
+        </details>
+      </section>
+
+      <div class="generate-bar">
+        <div class="generate-copy">
+          <span class="section-kicker">Ready when you are</span>
+          <p id="generateSummary">Generate 100 native SegWit addresses from one account xpub.</p>
+        </div>
+        <div class="generate-actions">
+          <button class="btn btn-primary" id="generateBtn" type="submit">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Generate addresses
+          </button>
+          <button class="btn btn-quiet" id="cancelBtn" type="button" hidden>Cancel</button>
+        </div>
+      </div>
+
+      <div id="progressWrap" class="progress-wrap" hidden aria-live="polite">
+        <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+        <div class="progress-meta"><span id="progressText">Preparing…</span><span id="progressPct">0%</span></div>
+      </div>
+      <div id="formError" class="error-box" role="alert" hidden></div>
+    </form>
+  </section>
+
+  <section id="resultsSection" class="results" aria-labelledby="resultsTitle" hidden>
+    <div class="results-head">
+      <div>
+        <span class="section-kicker">Output</span>
+        <h2 id="resultsTitle">Generated addresses</h2>
+        <div id="resultMeta" class="result-meta"></div>
+      </div>
+      <div class="result-actions">
+        <label class="mini-field export-format">
+          <span>Format</span>
+          <select id="exportFormat">
+            <option value="numbered">Numbered text</option>
+            <option value="plain">Addresses only</option>
+            <option value="csv">CSV</option>
+          </select>
+        </label>
+        <button class="btn btn-primary btn-small" id="downloadBtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Download
+        </button>
+        <button class="btn btn-quiet btn-small" id="copyBtn" type="button">Copy addresses</button>
+        <button class="btn btn-quiet btn-small" id="printBtn" type="button">Print</button>
+      </div>
+    </div>
+    <div class="result-note" id="resultNote"></div>
+    <div class="table-wrap">
+      <table class="address-table">
+        <thead><tr><th>#</th><th>Derivation path</th><th>Address</th></tr></thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
+    <p class="preview-note" id="previewNote"></p>
+  </section>
+
+  <section class="help" aria-labelledby="helpTitle">
+    <div class="help-heading">
+      <span class="section-kicker">Field notes</span>
+      <h2 id="helpTitle">How this works — and how to stay private.</h2>
+    </div>
+    <div class="help-grid">
+      <details open>
+        <summary>What can I load?</summary>
+        <p>Paste an account xpub for single-signature wallets. For multisig, load each cosigner xpub. A plain text file with one xpub per line works, and a BIP39 backup file with a recovery phrase can be loaded for single-signature derivation. JSON configuration files are also supported.</p>
+        <p>Use xpubs exported at the level your wallet expects. Standard single-signature account xpubs are depth 3 (for example <code>m/84'/0'/0'</code>). Standard multisig xpubs are usually depth 4 (for example <code>m/48'/0'/0'/2'</code>).</p>
+      </details>
+      <details>
+        <summary>Why does my xpub depth matter?</summary>
+        <p>This page knows the path template but not the path that produced your xpub. It assumes the xpub corresponds to the first components of the template. Components already inside the xpub are skipped; the remaining components are derived from it. Hardened components cannot be derived from an xpub.</p>
+      </details>
+      <details>
+        <summary>How private is the output?</summary>
+        <p>Addresses and xpubs are sensitive but not secret: they cannot move funds, but they can reveal balances, history, and links between addresses. Keep exported files private. If you loaded a recovery phrase, that phrase is secret — clear the page and use a trusted offline machine.</p>
+      </details>
+      <details>
+        <summary>Can I verify the result?</summary>
+        <p>Yes. A good habit is to compare the first address with your wallet's receive screen before printing a large batch. The page implements BIP32, BIP39, BIP44/49/84/86, BIP48, BIP67, Base58Check, Bech32, and Bech32m derivation locally.</p>
+        <button class="btn btn-small btn-quiet" id="demoBtn" type="button">Load public BIP86 test vector</button>
+      </details>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="shell footer-inner">
+    <div>
+      <strong>DontTrustVerifyAddresses</strong>
+      <span>Single-file, offline address derivation.</span>
+    </div>
+    <div class="footer-actions">
+      <button class="link-button" id="clearBtn" type="button">Clear all</button>
+      <span class="footer-sep">·</span>
+      <span>No cookies. No analytics. No network.</span>
+    </div>
+  </div>
+</footer>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+/* DontTrustVerifyAddresses — offline Bitcoin address derivation core.
+ * Pure JavaScript. No network, no dependencies.
+ * Includes an English BIP39 word list for local mnemonic checksum validation.
+ */
+const DTVA_CORE = (() => {
+  'use strict';
+
+  // ---------- byte / encoding helpers ----------
+  const HEX = '0123456789abcdef';
+  const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+  const BECH32 = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+  const textEncoder = new TextEncoder();
+
+  function bytes(...parts) {
+    let len = 0;
+    for (const p of parts) len += p.length;
+    const out = new Uint8Array(len);
+    let off = 0;
+    for (const p of parts) { out.set(p, off); off += p.length; }
+    return out;
+  }
+  function utf8(s) { return textEncoder.encode(s); }
+  function bytesToHex(b) {
+    let s = '';
+    for (let i = 0; i < b.length; i++) s += HEX[b[i] >>> 4] + HEX[b[i] & 15];
+    return s;
+  }
+  function hexToBytes(h) {
+    h = h.replace(/\s+/g, '');
+    if (h.length % 2) throw new Error('Hex string must have an even number of characters.');
+    if (/[^0-9a-fA-F]/.test(h)) throw new Error('Invalid hex string.');
+    const out = new Uint8Array(h.length / 2);
+    for (let i = 0; i < out.length; i++) out[i] = parseInt(h.slice(i * 2, i * 2 + 2), 16);
+    return out;
+  }
+  function bytesToBigIntBE(b) {
+    let n = 0n;
+    for (let i = 0; i < b.length; i++) n = (n << 8n) | BigInt(b[i]);
+    return n;
+  }
+  function bigIntToBytesBE(n, len) {
+    const out = new Uint8Array(len);
+    for (let i = len - 1; i >= 0; i--) { out[i] = Number(n & 255n); n >>= 8n; }
+    if (n !== 0n) throw new Error('Integer too large for byte array.');
+    return out;
+  }
+  function readU32(b, off) {
+    return ((b[off] << 24) | (b[off + 1] << 16) | (b[off + 2] << 8) | b[off + 3]) >>> 0;
+  }
+  function ser32(n) {
+    return new Uint8Array([(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255]);
+  }
+  function concatBytes(parts) { return bytes(...parts); }
+  function equalBytes(a, b) {
+    if (a.length !== b.length) return false;
+    let t = 0;
+    for (let i = 0; i < a.length; i++) t |= a[i] ^ b[i];
+    return t === 0;
+  }
+
+  // ---------- SHA-256 ----------
+  const SHA256_K = new Uint32Array([
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+  ]);
+
+  function sha256(input) {
+    const msg = input instanceof Uint8Array ? input : new Uint8Array(input);
+    const bitLen = msg.length * 8;
+    const rem = msg.length % 64;
+    const padLen = rem < 56 ? 56 - rem : 120 - rem;
+    const padded = new Uint8Array(msg.length + padLen + 8);
+    padded.set(msg);
+    padded[msg.length] = 0x80;
+    const view = new DataView(padded.buffer);
+    view.setUint32(padded.length - 8, Math.floor(bitLen / 0x100000000), false);
+    view.setUint32(padded.length - 4, bitLen >>> 0, false);
+
+    let h0 = 0x6a09e667 | 0, h1 = 0xbb67ae85 | 0, h2 = 0x3c6ef372 | 0, h3 = 0xa54ff53a | 0;
+    let h4 = 0x510e527f | 0, h5 = 0x9b05688c | 0, h6 = 0x1f83d9ab | 0, h7 = 0x5be0cd19 | 0;
+    const w = new Uint32Array(64);
+
+    for (let off = 0; off < padded.length; off += 64) {
+      for (let i = 0; i < 16; i++) w[i] = view.getUint32(off + i * 4, false);
+      for (let i = 16; i < 64; i++) {
+        const x = w[i - 15], y = w[i - 2];
+        const s0 = ((x >>> 7) | (x << 25)) ^ ((x >>> 18) | (x << 14)) ^ (x >>> 3);
+        const s1 = ((y >>> 17) | (y << 15)) ^ ((y >>> 19) | (y << 13)) ^ (y >>> 10);
+        w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
+      }
+      let a = h0, b = h1, c = h2, d = h3, e = h4, f = h5, g = h6, h = h7;
+      for (let i = 0; i < 64; i++) {
+        const S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
+        const ch = (e & f) ^ (~e & g);
+        const t1 = (h + S1 + ch + SHA256_K[i] + w[i]) | 0;
+        const S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
+        const maj = (a & b) ^ (a & c) ^ (b & c);
+        const t2 = (S0 + maj) | 0;
+        h = g; g = f; f = e; e = (d + t1) | 0;
+        d = c; c = b; b = a; a = (t1 + t2) | 0;
+      }
+      h0 = (h0 + a) | 0; h1 = (h1 + b) | 0; h2 = (h2 + c) | 0; h3 = (h3 + d) | 0;
+      h4 = (h4 + e) | 0; h5 = (h5 + f) | 0; h6 = (h6 + g) | 0; h7 = (h7 + h) | 0;
+    }
+    const out = new Uint8Array(32);
+    const ov = new DataView(out.buffer);
+    ov.setUint32(0, h0 >>> 0, false); ov.setUint32(4, h1 >>> 0, false);
+    ov.setUint32(8, h2 >>> 0, false); ov.setUint32(12, h3 >>> 0, false);
+    ov.setUint32(16, h4 >>> 0, false); ov.setUint32(20, h5 >>> 0, false);
+    ov.setUint32(24, h6 >>> 0, false); ov.setUint32(28, h7 >>> 0, false);
+    return out;
+  }
+
+  // ---------- SHA-512 (32-bit high/low pairs; constants from RFC 6234) ----------
+  const SHA512_KH = new Uint32Array([
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+    0xca273ece, 0xd186b8c7, 0xeada7dd6, 0xf57d4f7f, 0x06f067aa, 0x0a637dc5, 0x113f9804, 0x1b710b35,
+    0x28db77f5, 0x32caab7b, 0x3c9ebe0a, 0x431d67c4, 0x4cc5d4be, 0x597f299c, 0x5fcb6fab, 0x6c44198c
+  ]);
+  const SHA512_KL = new Uint32Array([
+    0xd728ae22, 0x23ef65cd, 0xec4d3b2f, 0x8189dbbc, 0xf348b538, 0xb605d019, 0xaf194f9b, 0xda6d8118,
+    0xa3030242, 0x45706fbe, 0x4ee4b28c, 0xd5ffb4e2, 0xf27b896f, 0x3b1696b1, 0x25c71235, 0xcf692694,
+    0x9ef14ad2, 0x384f25e3, 0x8b8cd5b5, 0x77ac9c65, 0x592b0275, 0x6ea6e483, 0xbd41fbd4, 0x831153b5,
+    0xee66dfab, 0x2db43210, 0x98fb213f, 0xbeef0ee4, 0x3da88fc2, 0x930aa725, 0xe003826f, 0x0a0e6e70,
+    0x46d22ffc, 0x5c26c926, 0x5ac42aed, 0x9d95b3df, 0x8baf63de, 0x3c77b2a8, 0x47edaee6, 0x1482353b,
+    0x4cf10364, 0xbc423001, 0xd0f89791, 0x0654be30, 0xd6ef5218, 0x5565a910, 0x5771202a, 0x32bbd1b8,
+    0xb8d2d0c8, 0x5141ab53, 0xdf8eeb99, 0xe19b48a8, 0xc5c95a63, 0xe3418acb, 0x7763e373, 0xd6b2b8a3,
+    0x5defb2fc, 0x43172f60, 0xa1f0ab72, 0x1a6439ec, 0x23631e28, 0xde82bde9, 0xb2c67915, 0xe372532b,
+    0xea26619c, 0x21c0c207, 0xcde0eb1e, 0xee6ed178, 0x72176fba, 0xa2c898a6, 0xbef90dae, 0x131c471b,
+    0x23047d84, 0x40c72493, 0x15c9bebc, 0x9c100d4c, 0xcb3e42b6, 0xfc657e2a, 0x3ad6faec, 0x4a475817
+  ]);
+  const SHA512_IVH = new Uint32Array([
+    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
+  ]);
+  const SHA512_IVL = new Uint32Array([
+    0xf3bcc908, 0x84caa73b, 0xfe94f82b, 0x5f1d36f1, 0xade682d1, 0x2b3e6c1f, 0xfb41bd6b, 0x137e2179
+  ]);
+
+  function add64(ah, al, bh, bl) {
+    const sum = (al >>> 0) + (bl >>> 0);
+    const lo = sum >>> 0;
+    const carry = sum > 0xffffffff ? 1 : 0;
+    return [((ah >>> 0) + (bh >>> 0) + carry) >>> 0, lo];
+  }
+  function add64many(...pairs) {
+    let hi = 0, lo = 0;
+    for (let i = 0; i < pairs.length; i += 2) {
+      const sum = (lo >>> 0) + (pairs[i + 1] >>> 0);
+      const carry = sum > 0xffffffff ? 1 : 0;
+      lo = sum >>> 0;
+      hi = ((hi >>> 0) + (pairs[i] >>> 0) + carry) >>> 0;
+    }
+    return [hi, lo];
+  }
+  function rotr64(hi, lo, n) {
+    if (n === 32) return [lo >>> 0, hi >>> 0];
+    if (n < 32) {
+      return [((hi >>> n) | (lo << (32 - n))) >>> 0, ((lo >>> n) | (hi << (32 - n))) >>> 0];
+    }
+    n -= 32;
+    return [((lo >>> n) | (hi << (32 - n))) >>> 0, ((hi >>> n) | (lo << (32 - n))) >>> 0];
+  }
+  function shr64(hi, lo, n) {
+    if (n === 32) return [0, hi >>> 0];
+    if (n < 32) return [hi >>> n, ((lo >>> n) | (hi << (32 - n))) >>> 0];
+    return [0, hi >>> (n - 32)];
+  }
+
+  function sha512(input) {
+    const msg = input instanceof Uint8Array ? input : new Uint8Array(input);
+    const bitLen = msg.length * 8;
+    const rem = msg.length % 128;
+    const padLen = rem < 112 ? 112 - rem : 240 - rem;
+    const padded = new Uint8Array(msg.length + padLen + 16);
+    padded.set(msg);
+    padded[msg.length] = 0x80;
+    const view = new DataView(padded.buffer);
+    view.setUint32(padded.length - 8, Math.floor(bitLen / 0x100000000), false);
+    view.setUint32(padded.length - 4, bitLen >>> 0, false);
+
+    let h0h = SHA512_IVH[0], h0l = SHA512_IVL[0];
+    let h1h = SHA512_IVH[1], h1l = SHA512_IVL[1];
+    let h2h = SHA512_IVH[2], h2l = SHA512_IVL[2];
+    let h3h = SHA512_IVH[3], h3l = SHA512_IVL[3];
+    let h4h = SHA512_IVH[4], h4l = SHA512_IVL[4];
+    let h5h = SHA512_IVH[5], h5l = SHA512_IVL[5];
+    let h6h = SHA512_IVH[6], h6l = SHA512_IVL[6];
+    let h7h = SHA512_IVH[7], h7l = SHA512_IVL[7];
+    const wh = new Uint32Array(80), wl = new Uint32Array(80);
+
+    for (let off = 0; off < padded.length; off += 128) {
+      for (let i = 0; i < 16; i++) {
+        wh[i] = view.getUint32(off + i * 8, false);
+        wl[i] = view.getUint32(off + i * 8 + 4, false);
+      }
+      for (let i = 16; i < 80; i++) {
+        let xh = wh[i - 15], xl = wl[i - 15];
+        const s0a = rotr64(xh, xl, 1), s0b = rotr64(xh, xl, 8), s0c = shr64(xh, xl, 7);
+        const s0h = (s0a[0] ^ s0b[0] ^ s0c[0]) >>> 0;
+        const s0l = (s0a[1] ^ s0b[1] ^ s0c[1]) >>> 0;
+        xh = wh[i - 2]; xl = wl[i - 2];
+        const s1a = rotr64(xh, xl, 19), s1b = rotr64(xh, xl, 61), s1c = shr64(xh, xl, 6);
+        const s1h = (s1a[0] ^ s1b[0] ^ s1c[0]) >>> 0;
+        const s1l = (s1a[1] ^ s1b[1] ^ s1c[1]) >>> 0;
+        const sum = add64many(
+          wh[i - 16], wl[i - 16], s0h, s0l,
+          wh[i - 7], wl[i - 7], s1h, s1l
+        );
+        wh[i] = sum[0]; wl[i] = sum[1];
+      }
+
+      let ah = h0h, al = h0l, bh = h1h, bl = h1l;
+      let ch = h2h, cl = h2l, dh = h3h, dl = h3l;
+      let eh = h4h, el = h4l, fh = h5h, fl = h5l;
+      let gh = h6h, gl = h6l, hh = h7h, hl = h7l;
+
+      for (let i = 0; i < 80; i++) {
+        const S1a = rotr64(eh, el, 14), S1b = rotr64(eh, el, 18), S1c = rotr64(eh, el, 41);
+        const S1h = (S1a[0] ^ S1b[0] ^ S1c[0]) >>> 0;
+        const S1l = (S1a[1] ^ S1b[1] ^ S1c[1]) >>> 0;
+        const chh = ((eh & fh) ^ (~eh & gh)) >>> 0;
+        const chl = ((el & fl) ^ (~el & gl)) >>> 0;
+        const t1 = add64many(hh, hl, S1h, S1l, chh, chl, SHA512_KH[i], SHA512_KL[i], wh[i], wl[i]);
+        const S0a = rotr64(ah, al, 28), S0b = rotr64(ah, al, 34), S0c = rotr64(ah, al, 39);
+        const S0h = (S0a[0] ^ S0b[0] ^ S0c[0]) >>> 0;
+        const S0l = (S0a[1] ^ S0b[1] ^ S0c[1]) >>> 0;
+        const majh = ((ah & bh) ^ (ah & ch) ^ (bh & ch)) >>> 0;
+        const majl = ((al & bl) ^ (al & cl) ^ (bl & cl)) >>> 0;
+        const t2 = add64(S0h, S0l, majh, majl);
+        hh = gh; hl = gl; gh = fh; gl = fl; fh = eh; fl = el;
+        const ed = add64(dh, dl, t1[0], t1[1]);
+        eh = ed[0]; el = ed[1];
+        dh = ch; dl = cl; ch = bh; cl = bl; bh = ah; bl = al;
+        const at = add64(t1[0], t1[1], t2[0], t2[1]);
+        ah = at[0]; al = at[1];
+      }
+      let s = add64(h0h, h0l, ah, al); h0h = s[0]; h0l = s[1];
+      s = add64(h1h, h1l, bh, bl); h1h = s[0]; h1l = s[1];
+      s = add64(h2h, h2l, ch, cl); h2h = s[0]; h2l = s[1];
+      s = add64(h3h, h3l, dh, dl); h3h = s[0]; h3l = s[1];
+      s = add64(h4h, h4l, eh, el); h4h = s[0]; h4l = s[1];
+      s = add64(h5h, h5l, fh, fl); h5h = s[0]; h5l = s[1];
+      s = add64(h6h, h6l, gh, gl); h6h = s[0]; h6l = s[1];
+      s = add64(h7h, h7l, hh, hl); h7h = s[0]; h7l = s[1];
+    }
+
+    const out = new Uint8Array(64);
+    const ov = new DataView(out.buffer);
+    const hs = [h0h, h0l, h1h, h1l, h2h, h2l, h3h, h3l, h4h, h4l, h5h, h5l, h6h, h6l, h7h, h7l];
+    for (let i = 0; i < 16; i++) ov.setUint32(i * 4, hs[i] >>> 0, false);
+    return out;
+  }
+
+  function hmacSha512(key, data) {
+    let k = key instanceof Uint8Array ? key : new Uint8Array(key);
+    if (k.length > 128) k = sha512(k);
+    const ipad = new Uint8Array(128), opad = new Uint8Array(128);
+    ipad.fill(0x36); opad.fill(0x5c);
+    for (let i = 0; i < k.length; i++) { ipad[i] ^= k[i]; opad[i] ^= k[i]; }
+    return sha512(bytes(opad, sha512(bytes(ipad, data))));
+  }
+  function hmacSha256(key, data) {
+    let k = key instanceof Uint8Array ? key : new Uint8Array(key);
+    if (k.length > 64) k = sha256(k);
+    const ipad = new Uint8Array(64), opad = new Uint8Array(64);
+    ipad.fill(0x36); opad.fill(0x5c);
+    for (let i = 0; i < k.length; i++) { ipad[i] ^= k[i]; opad[i] ^= k[i]; }
+    return sha256(bytes(opad, sha256(bytes(ipad, data))));
+  }
+  function sha256d(b) { return sha256(sha256(b)); }
+  function hash160(b) { return ripemd160(sha256(b)); }
+
+  function pbkdf2Sha512(password, salt, iterations, dkLen) {
+    const result = new Uint8Array(dkLen);
+    let offset = 0, block = 1;
+    while (offset < dkLen) {
+      const u = hmacSha512(password, bytes(salt, ser32(block)));
+      let t = u.slice();
+      for (let i = 1; i < iterations; i++) {
+        const next = hmacSha512(password, u);
+        u.set(next);
+        for (let j = 0; j < t.length; j++) t[j] ^= next[j];
+      }
+      const take = Math.min(t.length, dkLen - offset);
+      result.set(t.slice(0, take), offset);
+      offset += take;
+      block++;
+    }
+    return result;
+  }
+
+  // ---------- RIPEMD-160 ----------
+  const RMD_R1 = [
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+    7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8,
+    3, 10, 14, 4, 9, 15, 8, 1, 2, 7, 0, 6, 13, 11, 5, 12,
+    1, 9, 11, 10, 0, 8, 12, 4, 13, 3, 7, 15, 14, 5, 6, 2,
+    4, 0, 5, 9, 7, 12, 2, 10, 14, 1, 3, 8, 11, 6, 15, 13
+  ];
+  const RMD_R2 = [
+    5, 14, 7, 0, 9, 2, 11, 4, 13, 6, 15, 8, 1, 10, 3, 12,
+    6, 11, 3, 7, 0, 13, 5, 10, 14, 15, 8, 12, 4, 9, 1, 2,
+    15, 5, 1, 3, 7, 14, 6, 9, 11, 8, 12, 2, 10, 0, 4, 13,
+    8, 6, 4, 1, 3, 11, 15, 0, 5, 12, 2, 13, 9, 7, 10, 14,
+    12, 15, 10, 4, 1, 5, 8, 7, 6, 2, 13, 14, 0, 3, 9, 11
+  ];
+  const RMD_S1 = [
+    11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8,
+    7, 6, 8, 13, 11, 9, 7, 15, 7, 12, 15, 9, 11, 7, 13, 12,
+    11, 13, 6, 7, 14, 9, 13, 15, 14, 8, 13, 6, 5, 12, 7, 5,
+    11, 12, 14, 15, 14, 15, 9, 8, 9, 14, 5, 6, 8, 6, 5, 12,
+    9, 15, 5, 11, 6, 8, 13, 12, 5, 12, 13, 14, 11, 8, 5, 6
+  ];
+  const RMD_S2 = [
+    8, 9, 9, 11, 13, 15, 15, 5, 7, 7, 8, 11, 14, 14, 12, 6,
+    9, 13, 15, 7, 12, 8, 9, 11, 7, 7, 12, 7, 6, 15, 13, 11,
+    9, 7, 15, 11, 8, 6, 6, 14, 12, 13, 5, 14, 13, 13, 7, 5,
+    15, 5, 8, 11, 14, 14, 6, 14, 6, 9, 12, 9, 12, 5, 15, 8,
+    8, 5, 12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11
+  ];
+  const RMD_KL = [0x00000000, 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xa953fd4e];
+  const RMD_KR = [0x50a28be6, 0x5c4dd124, 0x6d703ef3, 0x7a6d76e9, 0x00000000];
+
+  function rotl32(x, n) { return ((x << n) | (x >>> (32 - n))) >>> 0; }
+  function rmdF(j, x, y, z) {
+    if (j < 16) return (x ^ y ^ z) >>> 0;
+    if (j < 32) return ((x & y) | (~x & z)) >>> 0;
+    if (j < 48) return ((x | ~y) ^ z) >>> 0;
+    if (j < 64) return ((x & z) | (y & ~z)) >>> 0;
+    return (x ^ (y | ~z)) >>> 0;
+  }
+
+  function ripemd160(input) {
+    const msg = input instanceof Uint8Array ? input : new Uint8Array(input);
+    const bitLen = msg.length * 8;
+    const rem = msg.length % 64;
+    const padLen = rem < 56 ? 56 - rem : 120 - rem;
+    const padded = new Uint8Array(msg.length + padLen + 8);
+    padded.set(msg);
+    padded[msg.length] = 0x80;
+    const view = new DataView(padded.buffer);
+    view.setUint32(padded.length - 8, bitLen >>> 0, true);
+    view.setUint32(padded.length - 4, Math.floor(bitLen / 0x100000000), true);
+
+    let h0 = 0x67452301, h1 = 0xefcdab89, h2 = 0x98badcfe, h3 = 0x10325476, h4 = 0xc3d2e1f0;
+    const x = new Uint32Array(16);
+
+    for (let off = 0; off < padded.length; off += 64) {
+      for (let i = 0; i < 16; i++) x[i] = view.getUint32(off + i * 4, true);
+      let al = h0, bl = h1, cl = h2, dl = h3, el = h4;
+      let ar = h0, br = h1, cr = h2, dr = h3, er = h4;
+      for (let j = 0; j < 80; j++) {
+        let t = (al + rmdF(j, bl, cl, dl) + x[RMD_R1[j]] + RMD_KL[(j / 16) | 0]) >>> 0;
+        t = (rotl32(t, RMD_S1[j]) + el) >>> 0;
+        al = el; el = dl; dl = rotl32(cl, 10); cl = bl; bl = t;
+
+        t = (ar + rmdF(79 - j, br, cr, dr) + x[RMD_R2[j]] + RMD_KR[(j / 16) | 0]) >>> 0;
+        t = (rotl32(t, RMD_S2[j]) + er) >>> 0;
+        ar = er; er = dr; dr = rotl32(cr, 10); cr = br; br = t;
+      }
+      const t = (h1 + cl + dr) >>> 0;
+      h1 = (h2 + dl + er) >>> 0;
+      h2 = (h3 + el + ar) >>> 0;
+      h3 = (h4 + al + br) >>> 0;
+      h4 = (h0 + bl + cr) >>> 0;
+      h0 = t;
+    }
+    const out = new Uint8Array(20);
+    const ov = new DataView(out.buffer);
+    ov.setUint32(0, h0 >>> 0, true); ov.setUint32(4, h1 >>> 0, true);
+    ov.setUint32(8, h2 >>> 0, true); ov.setUint32(12, h3 >>> 0, true);
+    ov.setUint32(16, h4 >>> 0, true);
+    return out;
+  }
+
+  // ---------- Base58Check ----------
+  function base58Encode(b) {
+    let n = bytesToBigIntBE(b);
+    let s = '';
+    while (n > 0n) {
+      s = B58[Number(n % 58n)] + s;
+      n /= 58n;
+    }
+    for (let i = 0; i < b.length && b[i] === 0; i++) s = '1' + s;
+    return s;
+  }
+  function base58Decode(s) {
+    let n = 0n;
+    for (let i = 0; i < s.length; i++) {
+      const d = B58.indexOf(s[i]);
+      if (d < 0) throw new Error('Invalid Base58 character.');
+      n = n * 58n + BigInt(d);
+    }
+    const raw = [];
+    while (n > 0n) { raw.push(Number(n & 255n)); n >>= 8n; }
+    raw.reverse();
+    let zeros = 0;
+    while (zeros < s.length && s[zeros] === '1') zeros++;
+    return new Uint8Array([...new Array(zeros).fill(0), ...raw]);
+  }
+  function base58CheckEncode(payload) {
+    return base58Encode(bytes(payload, sha256d(payload).slice(0, 4)));
+  }
+  function base58CheckDecode(s) {
+    const raw = base58Decode(s);
+    if (raw.length < 5) throw new Error('Invalid Base58Check string.');
+    const payload = raw.slice(0, -4);
+    const check = raw.slice(-4);
+    if (!equalBytes(check, sha256d(payload).slice(0, 4))) throw new Error('Base58Check checksum failed.');
+    return payload;
+  }
+
+  // ---------- Bech32 / Bech32m ----------
+  function bech32Polymod(values) {
+    const GEN = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
+    let chk = 1;
+    for (let i = 0; i < values.length; i++) {
+      const top = chk >>> 25;
+      chk = (((chk & 0x1ffffff) << 5) ^ values[i]) >>> 0;
+      for (let j = 0; j < 5; j++) if ((top >>> j) & 1) chk = (chk ^ GEN[j]) >>> 0;
+    }
+    return chk >>> 0;
+  }
+  function bech32HrpExpand(hrp) {
+    const out = [];
+    for (let i = 0; i < hrp.length; i++) out.push(hrp.charCodeAt(i) >>> 5);
+    out.push(0);
+    for (let i = 0; i < hrp.length; i++) out.push(hrp.charCodeAt(i) & 31);
+    return out;
+  }
+  function convertBits(data, fromBits, toBits, pad) {
+    let acc = 0, bits = 0;
+    const out = [];
+    const maxv = (1 << toBits) - 1;
+    for (let i = 0; i < data.length; i++) {
+      const value = data[i];
+      if (value < 0 || (value >>> fromBits) !== 0) throw new Error('Invalid data for Bech32 conversion.');
+      acc = (acc << fromBits) | value;
+      bits += fromBits;
+      while (bits >= toBits) {
+        bits -= toBits;
+        out.push((acc >>> bits) & maxv);
+      }
+    }
+    if (pad) {
+      if (bits > 0) out.push((acc << (toBits - bits)) & maxv);
+    } else if (bits >= fromBits || ((acc << (toBits - bits)) & maxv)) {
+      throw new Error('Invalid Bech32 padding.');
+    }
+    return out;
+  }
+  function bech32Encode(hrp, data, constant) {
+    const values = bech32HrpExpand(hrp).concat(data);
+    const polymod = bech32Polymod(values.concat([0, 0, 0, 0, 0, 0])) ^ constant;
+    const checksum = [];
+    for (let i = 0; i < 6; i++) checksum.push((polymod >>> (5 * (5 - i))) & 31);
+    return hrp + '1' + data.concat(checksum).map(v => BECH32[v]).join('');
+  }
+  function segwitAddress(version, program, network) {
+    const hrp = network === 'testnet' ? 'tb' : 'bc';
+    const data = [version].concat(convertBits(Array.from(program), 8, 5, true));
+    return bech32Encode(hrp, data, version === 0 ? 1 : 0x2bc830a3);
+  }
+
+  // ---------- secp256k1 ----------
+  const P = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2fn;
+  const N = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
+  const GX = 0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798n;
+  const GY = 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8n;
+  const INF = { X: 0n, Y: 1n, Z: 0n };
+
+  function modP(a) { a %= P; return a >= 0n ? a : a + P; }
+  function modN(a) { a %= N; return a >= 0n ? a : a + N; }
+  function powMod(base, exp, mod) {
+    let result = 1n;
+    base %= mod;
+    while (exp > 0n) {
+      if (exp & 1n) result = (result * base) % mod;
+      base = (base * base) % mod;
+      exp >>= 1n;
+    }
+    return result;
+  }
+  function invP(a) { return powMod(a, P - 2n, P); }
+
+  function jacDouble(p) {
+    if (p.Z === 0n || p.Y === 0n) return INF;
+    const y2 = modP(p.Y * p.Y);
+    const s = modP(4n * p.X * y2);
+    const m = modP(3n * p.X * p.X);
+    const x3 = modP(m * m - 2n * s);
+    const y3 = modP(m * (s - x3) - 8n * y2 * y2);
+    const z3 = modP(2n * p.Y * p.Z);
+    return { X: x3, Y: y3, Z: z3 };
+  }
+  function jacAddAffine(p, q) {
+    if (p.Z === 0n) return { X: q.x, Y: q.y, Z: 1n };
+    const z1z1 = modP(p.Z * p.Z);
+    const u2 = modP(q.x * z1z1);
+    const s2 = modP(q.y * p.Z * z1z1);
+    const h = modP(u2 - p.X);
+    const r = modP(s2 - p.Y);
+    if (h === 0n) return r === 0n ? jacDouble(p) : INF;
+    const hh = modP(h * h);
+    const hhh = modP(h * hh);
+    const v = modP(p.X * hh);
+    const x3 = modP(r * r - hhh - 2n * v);
+    const y3 = modP(r * (v - x3) - p.Y * hhh);
+    const z3 = modP(p.Z * h);
+    return { X: x3, Y: y3, Z: z3 };
+  }
+  function jacToAffine(p) {
+    if (p.Z === 0n) return null;
+    const zi = invP(p.Z);
+    const zi2 = modP(zi * zi);
+    return { x: modP(p.X * zi2), y: modP(p.Y * zi2 * zi) };
+  }
+  function batchToAffine(points) {
+    const n = points.length;
+    const out = new Array(n);
+    const prefix = new Array(n);
+    let acc = 1n;
+    for (let i = 0; i < n; i++) {
+      prefix[i] = acc;
+      if (points[i].Z !== 0n) acc = modP(acc * points[i].Z);
+    }
+    let inv = invP(acc);
+    for (let i = n - 1; i >= 0; i--) {
+      const p = points[i];
+      if (p.Z === 0n) { out[i] = null; continue; }
+      const zi = modP(inv * prefix[i]);
+      const zi2 = modP(zi * zi);
+      out[i] = { x: modP(p.X * zi2), y: modP(p.Y * zi2 * zi) };
+      inv = modP(inv * p.Z);
+    }
+    return out;
+  }
+
+  function pointFromCompressed(pub) {
+    if (pub.length !== 33 || (pub[0] !== 2 && pub[0] !== 3)) throw new Error('Invalid compressed public key.');
+    const x = bytesToBigIntBE(pub.slice(1));
+    if (x >= P) throw new Error('Invalid public key x-coordinate.');
+    const y2 = modP(x * x * x + 7n);
+    let y = powMod(y2, (P + 1n) / 4n, P);
+    if (modP(y * y) !== y2) throw new Error('Public key is not on secp256k1.');
+    if ((y & 1n) !== BigInt(pub[0] & 1)) y = P - y;
+    return { x, y };
+  }
+  function compressPoint(p) {
+    if (!p) throw new Error('Invalid point.');
+    return bytes(new Uint8Array([(p.y & 1n) === 1n ? 3 : 2]), bigIntToBytesBE(p.x, 32));
+  }
+
+  let FIXED_TABLE = null;
+  function buildFixedTable() {
+    if (FIXED_TABLE) return FIXED_TABLE;
+    const table = new Array(32);
+    let base = { x: GX, y: GY };
+    for (let w = 0; w < 32; w++) {
+      const jac = new Array(256);
+      jac[0] = INF;
+      jac[1] = { X: base.x, Y: base.y, Z: 1n };
+      let cur = jac[1];
+      for (let j = 2; j < 256; j++) { cur = jacAddAffine(cur, base); jac[j] = cur; }
+      table[w] = batchToAffine(jac);
+      let bj = { X: base.x, Y: base.y, Z: 1n };
+      for (let d = 0; d < 8; d++) bj = jacDouble(bj);
+      base = jacToAffine(bj);
+    }
+    FIXED_TABLE = table;
+    return table;
+  }
+  function scalarMultGJac(k) {
+    if (k <= 0n || k >= N) return INF;
+    const table = buildFixedTable();
+    const kb = bigIntToBytesBE(k, 32);
+    let acc = INF;
+    for (let w = 0; w < 32; w++) {
+      const d = kb[31 - w];
+      if (d !== 0) acc = jacAddAffine(acc, table[w][d]);
+    }
+    return acc;
+  }
+  function scalarMultG(k) {
+    return jacToAffine(scalarMultGJac(k));
+  }
+  function pubkeyFromPrivate(priv) {
+    if (priv <= 0n || priv >= N) throw new Error('Invalid private key.');
+    return compressPoint(scalarMultG(priv));
+  }
+  function childPointFromTweak(parent, tweak) {
+    if (tweak >= N) throw new Error('Invalid BIP32 tweak.');
+    if (tweak === 0n) return parent;
+    const j = jacAddAffine(scalarMultGJac(tweak), parent);
+    const p = jacToAffine(j);
+    if (!p) throw new Error('Invalid BIP32 child point.');
+    return p;
+  }
+
+  // ---------- BIP32 ----------
+  function masterFromSeed(seed) {
+    const I = hmacSha512(utf8('Bitcoin seed'), seed);
+    const k = bytesToBigIntBE(I.slice(0, 32));
+    if (k === 0n || k >= N) throw new Error('Invalid BIP32 master key.');
+    return { priv: k, chainCode: I.slice(32), depth: 0 };
+  }
+  function privateChild(node, index) {
+    const hardened = index >= 0x80000000;
+    const data = hardened
+      ? bytes(new Uint8Array([0]), bigIntToBytesBE(node.priv, 32), ser32(index))
+      : bytes(pubkeyFromPrivate(node.priv), ser32(index));
+    const I = hmacSha512(node.chainCode, data);
+    const il = bytesToBigIntBE(I.slice(0, 32));
+    if (il >= N) throw new Error('Invalid BIP32 private child.');
+    const child = modN(il + node.priv);
+    if (child === 0n) throw new Error('Invalid BIP32 private child.');
+    return { priv: child, chainCode: I.slice(32), depth: node.depth + 1 };
+  }
+  function publicNodeFromPrivate(node) {
+    return {
+      pubkey: pubkeyFromPrivate(node.priv),
+      point: scalarMultG(node.priv),
+      chainCode: node.chainCode,
+      depth: node.depth
+    };
+  }
+  function publicChild(node, index) {
+    if (index >= 0x80000000) throw new Error('Cannot derive a hardened child from an extended public key.');
+    const I = hmacSha512(node.chainCode, bytes(node.pubkey, ser32(index)));
+    const il = bytesToBigIntBE(I.slice(0, 32));
+    if (il >= N) throw new Error('Invalid BIP32 public child.');
+    const point = childPointFromTweak(node.point, il);
+    return {
+      pubkey: compressPoint(point),
+      point,
+      chainCode: I.slice(32),
+      depth: node.depth + 1
+    };
+  }
+
+  const XPUB_VERSIONS = {
+    '0488b21e': 'mainnet', '049d7cb2': 'mainnet', '04b24746': 'mainnet',
+    '0295b43f': 'mainnet', '02aa7ed3': 'mainnet',
+    '043587cf': 'testnet', '044a5262': 'testnet', '045f1cf6': 'testnet',
+    '024289ef': 'testnet', '02575483': 'testnet'
+  };
+  function parseExtendedPublicKey(input) {
+    const s = String(input || '').trim();
+    if (!s) throw new Error('Missing extended public key.');
+    const raw = base58CheckDecode(s);
+    if (raw.length !== 78) throw new Error('Extended public key must be 78 bytes.');
+    const version = bytesToHex(raw.slice(0, 4));
+    const network = XPUB_VERSIONS[version];
+    if (!network) throw new Error('Unsupported extended public key version. Use xpub, ypub, zpub, tpub, upub, or vpub.');
+    if (raw[45] !== 2 && raw[45] !== 3) throw new Error('Extended key does not contain a public key.');
+    const pubkey = raw.slice(45, 78);
+    const point = pointFromCompressed(pubkey);
+    return {
+      version,
+      network,
+      depth: raw[4],
+      parentFingerprint: raw.slice(5, 9),
+      childNumber: readU32(raw, 9),
+      chainCode: raw.slice(13, 45),
+      pubkey,
+      point
+    };
+  }
+
+  // ---------- BIP39 ----------
+  const BIP39_WORDS = `abandon ability able about above absent absorb abstract absurd abuse access accident account accuse achieve acid acoustic acquire across act action actor actress actual adapt add addict address adjust admit adult advance advice aerobic affair afford afraid again age agent agree ahead aim air airport aisle alarm album alcohol alert alien all alley allow almost alone alpha already also alter always amateur amazing among amount amused analyst anchor ancient anger angle angry animal ankle announce annual another answer antenna antique anxiety any apart apology appear apple approve april arch arctic area arena argue arm armed armor army around arrange arrest arrive arrow art artefact artist artwork ask aspect assault asset assist assume asthma athlete atom attack attend attitude attract auction audit august aunt author auto autumn average avocado avoid awake aware away awesome awful awkward axis baby bachelor bacon badge bag balance balcony ball bamboo banana banner bar barely bargain barrel base basic basket battle beach bean beauty because become beef before begin behave behind believe below belt bench benefit best betray better between beyond bicycle bid bike bind biology bird birth bitter black blade blame blanket blast bleak bless blind blood blossom blouse blue blur blush board boat body boil bomb bone bonus book boost border boring borrow boss bottom bounce box boy bracket brain brand brass brave bread breeze brick bridge brief bright bring brisk broccoli broken bronze broom brother brown brush bubble buddy budget buffalo build bulb bulk bullet bundle bunker burden burger burst bus business busy butter buyer buzz cabbage cabin cable cactus cage cake call calm camera camp can canal cancel candy cannon canoe canvas canyon capable capital captain car carbon card cargo carpet carry cart case cash casino castle casual cat catalog catch category cattle caught cause caution cave ceiling celery cement census century cereal certain chair chalk champion change chaos chapter charge chase chat cheap check cheese chef cherry chest chicken chief child chimney choice choose chronic chuckle chunk churn cigar cinnamon circle citizen city civil claim clap clarify claw clay clean clerk clever click client cliff climb clinic clip clock clog close cloth cloud clown club clump cluster clutch coach coast coconut code coffee coil coin collect color column combine come comfort comic common company concert conduct confirm congress connect consider control convince cook cool copper copy coral core corn correct cost cotton couch country couple course cousin cover coyote crack cradle craft cram crane crash crater crawl crazy cream credit creek crew cricket crime crisp critic crop cross crouch crowd crucial cruel cruise crumble crunch crush cry crystal cube culture cup cupboard curious current curtain curve cushion custom cute cycle dad damage damp dance danger daring dash daughter dawn day deal debate debris decade december decide decline decorate decrease deer defense define defy degree delay deliver demand demise denial dentist deny depart depend deposit depth deputy derive describe desert design desk despair destroy detail detect develop device devote diagram dial diamond diary dice diesel diet differ digital dignity dilemma dinner dinosaur direct dirt disagree discover disease dish dismiss disorder display distance divert divide divorce dizzy doctor document dog doll dolphin domain donate donkey donor door dose double dove draft dragon drama drastic draw dream dress drift drill drink drip drive drop drum dry duck dumb dune during dust dutch duty dwarf dynamic eager eagle early earn earth easily east easy echo ecology economy edge edit educate effort egg eight either elbow elder electric elegant element elephant elevator elite else embark embody embrace emerge emotion employ empower empty enable enact end endless endorse enemy energy enforce engage engine enhance enjoy enlist enough enrich enroll ensure enter entire entry envelope episode equal equip era erase erode erosion error erupt escape essay essence estate eternal ethics evidence evil evoke evolve exact example excess exchange excite exclude excuse execute exercise exhaust exhibit exile exist exit exotic expand expect expire explain expose express extend extra eye eyebrow fabric face faculty fade faint faith fall false fame family famous fan fancy fantasy farm fashion fat fatal father fatigue fault favorite feature february federal fee feed feel female fence festival fetch fever few fiber fiction field figure file film filter final find fine finger finish fire firm first fiscal fish fit fitness fix flag flame flash flat flavor flee flight flip float flock floor flower fluid flush fly foam focus fog foil fold follow food foot force forest forget fork fortune forum forward fossil foster found fox fragile frame frequent fresh friend fringe frog front frost frown frozen fruit fuel fun funny furnace fury future gadget gain galaxy gallery game gap garage garbage garden garlic garment gas gasp gate gather gauge gaze general genius genre gentle genuine gesture ghost giant gift giggle ginger giraffe girl give glad glance glare glass glide glimpse globe gloom glory glove glow glue goat goddess gold good goose gorilla gospel gossip govern gown grab grace grain grant grape grass gravity great green grid grief grit grocery group grow grunt guard guess guide guilt guitar gun gym habit hair half hammer hamster hand happy harbor hard harsh harvest hat have hawk hazard head health heart heavy hedgehog height hello helmet help hen hero hidden high hill hint hip hire history hobby hockey hold hole holiday hollow home honey hood hope horn horror horse hospital host hotel hour hover hub huge human humble humor hundred hungry hunt hurdle hurry hurt husband hybrid ice icon idea identify idle ignore ill illegal illness image imitate immense immune impact impose improve impulse inch include income increase index indicate indoor industry infant inflict inform inhale inherit initial inject injury inmate inner innocent input inquiry insane insect inside inspire install intact interest into invest invite involve iron island isolate issue item ivory jacket jaguar jar jazz jealous jeans jelly jewel job join joke journey joy judge juice jump jungle junior junk just kangaroo keen keep ketchup key kick kid kidney kind kingdom kiss kit kitchen kite kitten kiwi knee knife knock know lab label labor ladder lady lake lamp language laptop large later latin laugh laundry lava law lawn lawsuit layer lazy leader leaf learn leave lecture left leg legal legend leisure lemon lend length lens leopard lesson letter level liar liberty library license life lift light like limb limit link lion liquid list little live lizard load loan lobster local lock logic lonely long loop lottery loud lounge love loyal lucky luggage lumber lunar lunch luxury lyrics machine mad magic magnet maid mail main major make mammal man manage mandate mango mansion manual maple marble march margin marine market marriage mask mass master match material math matrix matter maximum maze meadow mean measure meat mechanic medal media melody melt member memory mention menu mercy merge merit merry mesh message metal method middle midnight milk million mimic mind minimum minor minute miracle mirror misery miss mistake mix mixed mixture mobile model modify mom moment monitor monkey monster month moon moral more morning mosquito mother motion motor mountain mouse move movie much muffin mule multiply muscle museum mushroom music must mutual myself mystery myth naive name napkin narrow nasty nation nature near neck need negative neglect neither nephew nerve nest net network neutral never news next nice night noble noise nominee noodle normal north nose notable note nothing notice novel now nuclear number nurse nut oak obey object oblige obscure observe obtain obvious occur ocean october odor off offer office often oil okay old olive olympic omit once one onion online only open opera opinion oppose option orange orbit orchard order ordinary organ orient original orphan ostrich other outdoor outer output outside oval oven over own owner oxygen oyster ozone pact paddle page pair palace palm panda panel panic panther paper parade parent park parrot party pass patch path patient patrol pattern pause pave payment peace peanut pear peasant pelican pen penalty pencil people pepper perfect permit person pet phone photo phrase physical piano picnic picture piece pig pigeon pill pilot pink pioneer pipe pistol pitch pizza place planet plastic plate play please pledge pluck plug plunge poem poet point polar pole police pond pony pool popular portion position possible post potato pottery poverty powder power practice praise predict prefer prepare present pretty prevent price pride primary print priority prison private prize problem process produce profit program project promote proof property prosper protect proud provide public pudding pull pulp pulse pumpkin punch pupil puppy purchase purity purpose purse push put puzzle pyramid quality quantum quarter question quick quit quiz quote rabbit raccoon race rack radar radio rail rain raise rally ramp ranch random range rapid rare rate rather raven raw razor ready real reason rebel rebuild recall receive recipe record recycle reduce reflect reform refuse region regret regular reject relax release relief rely remain remember remind remove render renew rent reopen repair repeat replace report require rescue resemble resist resource response result retire retreat return reunion reveal review reward rhythm rib ribbon rice rich ride ridge rifle right rigid ring riot ripple risk ritual rival river road roast robot robust rocket romance roof rookie room rose rotate rough round route royal rubber rude rug rule run runway rural sad saddle sadness safe sail salad salmon salon salt salute same sample sand satisfy satoshi sauce sausage save say scale scan scare scatter scene scheme school science scissors scorpion scout scrap screen script scrub sea search season seat second secret section security seed seek segment select sell seminar senior sense sentence series service session settle setup seven shadow shaft shallow share shed shell sheriff shield shift shine ship shiver shock shoe shoot shop short shoulder shove shrimp shrug shuffle shy sibling sick side siege sight sign silent silk silly silver similar simple since sing siren sister situate six size skate sketch ski skill skin skirt skull slab slam sleep slender slice slide slight slim slogan slot slow slush small smart smile smoke smooth snack snake snap sniff snow soap soccer social sock soda soft solar soldier solid solution solve someone song soon sorry sort soul sound soup source south space spare spatial spawn speak special speed spell spend sphere spice spider spike spin spirit split spoil sponsor spoon sport spot spray spread spring spy square squeeze squirrel stable stadium staff stage stairs stamp stand start state stay steak steel stem step stereo stick still sting stock stomach stone stool story stove strategy street strike strong struggle student stuff stumble style subject submit subway success such sudden suffer sugar suggest suit summer sun sunny sunset super supply supreme sure surface surge surprise surround survey suspect sustain swallow swamp swap swarm swear sweet swift swim swing switch sword symbol symptom syrup system table tackle tag tail talent talk tank tape target task taste tattoo taxi teach team tell ten tenant tennis tent term test text thank that theme then theory there they thing this thought three thrive throw thumb thunder ticket tide tiger tilt timber time tiny tip tired tissue title toast tobacco today toddler toe together toilet token tomato tomorrow tone tongue tonight tool tooth top topic topple torch tornado tortoise toss total tourist toward tower town toy track trade traffic tragic train transfer trap trash travel tray treat tree trend trial tribe trick trigger trim trip trophy trouble truck true truly trumpet trust truth try tube tuition tumble tuna tunnel turkey turn turtle twelve twenty twice twin twist two type typical ugly umbrella unable unaware uncle uncover under undo unfair unfold unhappy uniform unique unit universe unknown unlock until unusual unveil update upgrade uphold upon upper upset urban urge usage use used useful useless usual utility vacant vacuum vague valid valley valve van vanish vapor various vast vault vehicle velvet vendor venture venue verb verify version very vessel veteran viable vibrant vicious victory video view village vintage violin virtual virus visa visit visual vital vivid vocal voice void volcano volume vote voyage wage wagon wait walk wall walnut want warfare warm warrior wash wasp waste water wave way wealth weapon wear weasel weather web wedding weekend weird welcome west wet whale what wheat wheel when where whip whisper wide width wife wild will win window wine wing wink winner winter wire wisdom wise wish witness wolf woman wonder wood wool word work world worry worth wrap wreck wrestle wrist write wrong yard year yellow you young youth zebra zero zone zoo`.trim().split(/\s+/);
+  const BIP39_MAP = new Map(BIP39_WORDS.map((w, i) => [w, i]));
+  function validateMnemonic(mnemonic) {
+    const words = mnemonic.trim().toLowerCase().normalize('NFKD').split(/\s+/).filter(Boolean);
+    if (![12, 15, 18, 21, 24].includes(words.length)) {
+      throw new Error('Recovery phrase must contain 12, 15, 18, 21, or 24 words.');
+    }
+    const indexes = [];
+    for (const w of words) {
+      const i = BIP39_MAP.get(w);
+      if (i === undefined) throw new Error('Unknown BIP39 word: ' + w);
+      indexes.push(i);
+    }
+    let bits = '';
+    for (const i of indexes) bits += i.toString(2).padStart(11, '0');
+    const csBits = bits.length / 33;
+    const entBits = bits.length - csBits;
+    const entBytes = new Uint8Array(entBits / 8);
+    for (let i = 0; i < entBytes.length; i++) {
+      entBytes[i] = parseInt(bits.slice(i * 8, i * 8 + 8), 2);
+    }
+    const hash = sha256(entBytes);
+    let expected = '';
+    for (let i = 0; i < csBits; i++) expected += ((hash[(i / 8) | 0] >>> (7 - (i % 8))) & 1);
+    if (bits.slice(entBits) !== expected) throw new Error('Recovery phrase checksum is invalid.');
+    return words.join(' ');
+  }
+  function mnemonicToSeed(mnemonic, passphrase) {
+    const m = mnemonic.normalize('NFKD');
+    const salt = utf8(('mnemonic' + (passphrase || '')).normalize('NFKD'));
+    return pbkdf2Sha512(utf8(m), salt, 2048, 64);
+  }
+
+  // ---------- derivation paths ----------
+  function parsePathComponent(c) {
+    const m = /^(\d+)(['hH])?$/.exec(c);
+    if (!m) throw new Error('Invalid derivation path component: ' + c);
+    const n = Number(m[1]);
+    if (!Number.isSafeInteger(n) || n >= 0x80000000) throw new Error('Derivation path index is out of range: ' + c);
+    return m[2] ? n + 0x80000000 : n;
+  }
+  function parsePathTemplate(template) {
+    const s = String(template || '').trim();
+    if (!/^m(\/|$)/.test(s)) throw new Error('Derivation path must start with "m".');
+    const parts = s.split('/').slice(1).filter(Boolean);
+    let placeholder = -1;
+    const components = parts.map((p, i) => {
+      if (p === '{i}') {
+        if (placeholder >= 0) throw new Error('Derivation path may contain only one {i} placeholder.');
+        placeholder = i;
+        return null;
+      }
+      if (p.includes('{i}')) throw new Error('The {i} placeholder must be its own path component.');
+      return parsePathComponent(p);
+    });
+    if (placeholder < 0) throw new Error('Derivation path must contain an {i} placeholder for the address index.');
+    return { components, placeholder, path: s };
+  }
+  function pathForIndex(template, index) {
+    return template.components.map(c => c === null ? String(index) : (c >= 0x80000000 ? (c - 0x80000000) + "'" : String(c))).join('/').replace(/^/, 'm/');
+  }
+  function pathPrefix(template) {
+    return template.components.slice(0, template.placeholder);
+  }
+  function pathSuffix(template) {
+    return template.components.slice(template.placeholder + 1);
+  }
+
+  // ---------- addresses ----------
+  function p2pkhAddress(pubkey, network) {
+    const version = network === 'testnet' ? 0x6f : 0x00;
+    return base58CheckEncode(bytes(new Uint8Array([version]), hash160(pubkey)));
+  }
+  function p2shAddress(script, network) {
+    const version = network === 'testnet' ? 0xc4 : 0x05;
+    return base58CheckEncode(bytes(new Uint8Array([version]), hash160(script)));
+  }
+  function p2wpkhAddress(pubkey, network) {
+    return segwitAddress(0, hash160(pubkey), network);
+  }
+  function p2wshAddress(witnessScript, network) {
+    return segwitAddress(0, sha256(witnessScript), network);
+  }
+  function p2shP2wpkhAddress(pubkey, network) {
+    const redeem = bytes(new Uint8Array([0x00, 0x14]), hash160(pubkey));
+    return p2shAddress(redeem, network);
+  }
+  function p2shP2wshAddress(witnessScript, network) {
+    const redeem = bytes(new Uint8Array([0x00, 0x20]), sha256(witnessScript));
+    return p2shAddress(redeem, network);
+  }
+  function taggedHash(tag, msg) {
+    const th = sha256(utf8(tag));
+    return sha256(bytes(th, th, msg));
+  }
+  function p2trAddress(point, network) {
+    let internal = point;
+    if ((internal.y & 1n) === 1n) internal = { x: internal.x, y: P - internal.y };
+    const xonly = bigIntToBytesBE(internal.x, 32);
+    const tweak = bytesToBigIntBE(taggedHash('TapTweak', xonly));
+    if (tweak >= N) throw new Error('Invalid Taproot tweak.');
+    const q = jacToAffine(jacAddAffine(scalarMultGJac(tweak), internal));
+    if (!q) throw new Error('Invalid Taproot output key.');
+    return segwitAddress(1, bigIntToBytesBE(q.x, 32), network);
+  }
+  function multisigScript(pubkeys, threshold, sorted) {
+    const keys = pubkeys.slice();
+    if (sorted) keys.sort((a, b) => {
+      for (let i = 0; i < 33; i++) {
+        if (a[i] !== b[i]) return a[i] - b[i];
+      }
+      return 0;
+    });
+    if (keys.length < 1 || keys.length > 15) throw new Error('Multisig supports between 1 and 15 cosigners.');
+    if (threshold < 1 || threshold > keys.length) throw new Error('Invalid multisig threshold.');
+    const parts = [new Uint8Array([0x50 + threshold])];
+    for (const k of keys) {
+      if (k.length !== 33) throw new Error('Multisig cosigner keys must be compressed public keys.');
+      parts.push(new Uint8Array([33]), k);
+    }
+    parts.push(new Uint8Array([0x50 + keys.length, 0xae]));
+    return bytes(...parts);
+  }
+  function singleAddress(type, pubkey, point, network) {
+    switch (type) {
+      case 'legacy': return p2pkhAddress(pubkey, network);
+      case 'nested': return p2shP2wpkhAddress(pubkey, network);
+      case 'native': return p2wpkhAddress(pubkey, network);
+      case 'taproot': return p2trAddress(point, network);
+      default: throw new Error('Unknown address type.');
+    }
+  }
+  function multisigAddress(type, pubkeys, threshold, sorted, network) {
+    const script = multisigScript(pubkeys, threshold, sorted);
+    switch (type) {
+      case 'legacy': return p2shAddress(script, network);
+      case 'nested': return p2shP2wshAddress(script, network);
+      case 'native': return p2wshAddress(script, network);
+      default: throw new Error('Unknown multisig address type.');
+    }
+  }
+
+  // ---------- public API for the UI ----------
+  return {
+    bytes, utf8, bytesToHex, hexToBytes, bytesToBigIntBE, bigIntToBytesBE, ser32, equalBytes,
+    sha256, sha512, hmacSha512, hmacSha256, sha256d, hash160, ripemd160,
+    pbkdf2Sha512, base58Encode, base58Decode, base58CheckEncode, base58CheckDecode,
+    bech32Encode, segwitAddress, taggedHash,
+    P, N, GX, GY,
+    parseExtendedPublicKey, validateMnemonic, mnemonicToSeed,
+    masterFromSeed, privateChild, publicNodeFromPrivate, publicChild,
+    parsePathTemplate, pathForIndex, pathPrefix, pathSuffix,
+    p2pkhAddress, p2shAddress, p2wpkhAddress, p2wshAddress, p2shP2wpkhAddress,
+    p2shP2wshAddress, p2trAddress, multisigScript, singleAddress, multisigAddress,
+    buildFixedTable
+  };
+})();
+
+if (typeof module !== 'undefined' && module.exports) module.exports = DTVA_CORE;
+
+(() => {
+  'use strict';
+
+  const C = DTVA_CORE;
+  if (!C) throw new Error('Address derivation core failed to load.');
+
+  const MAX_ADDRESSES = 10000;
+  const MAX_COSIGNERS = 15;
+  const MIN_COSIGNERS = 2;
+  const RESULT_PREVIEW = 200;
+
+  const $ = (id) => document.getElementById(id);
+  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+  const state = {
+    mode: 'single',
+    results: [],
+    meta: null,
+    generating: false,
+    cancel: false
+  };
+
+  const els = {
+    tabSingle: $('tabSingle'),
+    tabMulti: $('tabMulti'),
+    singlePanel: $('singlePanel'),
+    multiPanel: $('multiPanel'),
+    networkSelect: $('networkSelect'),
+    importButton: $('importButton'),
+    fileInput: $('fileInput'),
+    importNote: $('importNote'),
+    walletForm: $('walletForm'),
+    singleXpubWrap: $('singleXpubWrap'),
+    singleMnemonicWrap: $('singleMnemonicWrap'),
+    singleXpub: $('singleXpub'),
+    singleMnemonic: $('singleMnemonic'),
+    singlePassphrase: $('singlePassphrase'),
+    singleAccount: $('singleAccount'),
+    singleChain: $('singleChain'),
+    singleStart: $('singleStart'),
+    singleCount: $('singleCount'),
+    singleCustomToggle: $('singleCustomToggle'),
+    singleCustomWrap: $('singleCustomWrap'),
+    singleCustomPath: $('singleCustomPath'),
+    singleResetPath: $('singleResetPath'),
+    singlePathDisplay: $('singlePathDisplay'),
+    cosignerList: $('cosignerList'),
+    addCosigner: $('addCosigner'),
+    multiThreshold: $('multiThreshold'),
+    multiThresholdOf: $('multiThresholdOf'),
+    multiSorted: $('multiSorted'),
+    multiAccount: $('multiAccount'),
+    multiChain: $('multiChain'),
+    multiStart: $('multiStart'),
+    multiCount: $('multiCount'),
+    multiCustomToggle: $('multiCustomToggle'),
+    multiCustomWrap: $('multiCustomWrap'),
+    multiCustomPath: $('multiCustomPath'),
+    multiResetPath: $('multiResetPath'),
+    multiPathDisplay: $('multiPathDisplay'),
+    generateSummary: $('generateSummary'),
+    generateBtn: $('generateBtn'),
+    cancelBtn: $('cancelBtn'),
+    progressWrap: $('progressWrap'),
+    progressBar: $('progressBar'),
+    progressText: $('progressText'),
+    progressPct: $('progressPct'),
+    formError: $('formError'),
+    resultsSection: $('resultsSection'),
+    resultMeta: $('resultMeta'),
+    resultNote: $('resultNote'),
+    resultsBody: $('resultsBody'),
+    previewNote: $('previewNote'),
+    exportFormat: $('exportFormat'),
+    downloadBtn: $('downloadBtn'),
+    copyBtn: $('copyBtn'),
+    printBtn: $('printBtn'),
+    demoBtn: $('demoBtn'),
+    clearBtn: $('clearBtn'),
+    toast: $('toast')
+  };
+
+  // ---------- generic UI helpers ----------
+  function radioValue(name) {
+    const el = document.querySelector(`input[name="${name}"]:checked`);
+    return el ? el.value : null;
+  }
+  function setRadio(name, value) {
+    const el = document.querySelector(`input[name="${name}"][value="${value}"]`);
+    if (el) el.checked = true;
+  }
+  function safeInt(value, fallback = 0) {
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.trunc(n) : fallback;
+  }
+  function fmtInt(n) {
+    return Number(n).toLocaleString('en-US');
+  }
+  function fmtDuration(ms) {
+    if (ms < 1000) return `${Math.round(ms)} ms`;
+    return `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)} s`;
+  }
+  function networkLabel(network) {
+    return network === 'testnet' ? 'Testnet' : 'Mainnet';
+  }
+  function typeLabel(type) {
+    return {
+      legacy: 'Legacy P2PKH',
+      nested: 'Nested SegWit',
+      native: 'Native SegWit',
+      taproot: 'Taproot'
+    }[type] || type;
+  }
+  function multiTypeLabel(type) {
+    return {
+      legacy: 'Legacy P2SH multisig',
+      nested: 'Nested SegWit P2SH-P2WSH',
+      native: 'Native SegWit P2WSH'
+    }[type] || type;
+  }
+  function walletTypeLabel(meta) {
+    if (meta.mode === 'multi') return `${meta.threshold}-of-${meta.cosignerCount} multisig`;
+    return 'Single signature';
+  }
+  function tick() {
+    return new Promise((resolve) => setTimeout(resolve, 0));
+  }
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (ch) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+  }
+  function slug(value) {
+    return String(value).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64) || 'addresses';
+  }
+
+  let toastTimer = null;
+  function toast(message, isError = false) {
+    els.toast.textContent = message;
+    els.toast.classList.toggle('is-error', !!isError);
+    els.toast.hidden = false;
+    requestAnimationFrame(() => els.toast.classList.add('is-visible'));
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      els.toast.classList.remove('is-visible');
+      setTimeout(() => { els.toast.hidden = true; }, 220);
+    }, 4200);
+  }
+  function showError(message) {
+    els.formError.textContent = message;
+    els.formError.hidden = false;
+  }
+  function clearError() {
+    els.formError.hidden = true;
+    els.formError.textContent = '';
+  }
+  function setProgress(percent, text) {
+    const p = Math.max(0, Math.min(100, percent));
+    els.progressWrap.hidden = false;
+    els.progressBar.style.width = `${p.toFixed(1)}%`;
+    els.progressPct.textContent = `${Math.floor(p)}%`;
+    if (text !== undefined) els.progressText.textContent = text;
+  }
+  function hideProgress() {
+    els.progressWrap.hidden = true;
+    els.progressBar.style.width = '0%';
+    els.progressText.textContent = 'Preparing…';
+    els.progressPct.textContent = '0%';
+  }
+  function setGenerating(value) {
+    state.generating = value;
+    els.generateBtn.disabled = value;
+    els.cancelBtn.hidden = !value;
+    els.cancelBtn.disabled = false;
+    els.cancelBtn.textContent = 'Cancel';
+  }
+
+  // ---------- mode + path helpers ----------
+  function setMode(mode) {
+    state.mode = mode === 'multi' ? 'multi' : 'single';
+    const single = state.mode === 'single';
+    els.tabSingle.classList.toggle('is-active', single);
+    els.tabMulti.classList.toggle('is-active', !single);
+    els.tabSingle.setAttribute('aria-selected', single ? 'true' : 'false');
+    els.tabMulti.setAttribute('aria-selected', single ? 'false' : 'true');
+    els.singlePanel.hidden = !single;
+    els.multiPanel.hidden = single;
+    updateSingleSource();
+    updatePaths();
+    updateSummary();
+  }
+  function updateSingleSource() {
+    const source = radioValue('singleSource') || 'xpub';
+    els.singleXpubWrap.hidden = source !== 'xpub';
+    els.singleMnemonicWrap.hidden = source !== 'mnemonic';
+  }
+  function getNetwork() {
+    return els.networkSelect.value === 'testnet' ? 'testnet' : 'mainnet';
+  }
+  function coinType() {
+    return getNetwork() === 'testnet' ? 1 : 0;
+  }
+  function singlePurpose(type) {
+    return { legacy: 44, nested: 49, native: 84, taproot: 86 }[type] || 84;
+  }
+  function singleDefaultPath() {
+    const type = radioValue('singleType') || 'native';
+    const account = Math.max(0, safeInt(els.singleAccount.value, 0));
+    const chain = els.singleChain.value === '1' ? 1 : 0;
+    return `m/${singlePurpose(type)}'/${coinType()}'/${account}'/${chain}/{i}`;
+  }
+  function multiDefaultPath() {
+    const type = radioValue('multiType') || 'native';
+    const script = { legacy: 0, nested: 1, native: 2 }[type] ?? 2;
+    const account = Math.max(0, safeInt(els.multiAccount.value, 0));
+    const chain = els.multiChain.value === '1' ? 1 : 0;
+    return `m/48'/${coinType()}'/${account}'/${script}'/${chain}/{i}`;
+  }
+  function updateSinglePath() {
+    if (!els.singleCustomToggle.checked) {
+      els.singleCustomPath.value = singleDefaultPath();
+    }
+    els.singlePathDisplay.textContent = (els.singleCustomToggle.checked ? els.singleCustomPath.value : singleDefaultPath()).trim() || '—';
+  }
+  function updateMultiPath() {
+    if (!els.multiCustomToggle.checked) {
+      els.multiCustomPath.value = multiDefaultPath();
+    }
+    els.multiPathDisplay.textContent = (els.multiCustomToggle.checked ? els.multiCustomPath.value : multiDefaultPath()).trim() || '—';
+  }
+  function updatePaths() {
+    updateSinglePath();
+    updateMultiPath();
+  }
+  function updateSummary() {
+    if (state.mode === 'single') {
+      const count = Math.max(0, safeInt(els.singleCount.value, 0));
+      const type = radioValue('singleType') || 'native';
+      const source = radioValue('singleSource') || 'xpub';
+      const unit = count === 1 ? 'address' : 'addresses';
+      els.generateSummary.textContent = `Generate ${count ? fmtInt(count) : '—'} ${typeLabel(type)} ${unit} from ${source === 'mnemonic' ? 'a recovery phrase' : 'one account xpub'}.`;
+    } else {
+      const count = Math.max(0, safeInt(els.multiCount.value, 0));
+      const rows = getCosignerRows();
+      const n = rows.length;
+      const m = Math.max(1, Math.min(n || 1, safeInt(els.multiThreshold.value, 1)));
+      const type = radioValue('multiType') || 'native';
+      const unit = count === 1 ? 'address' : 'addresses';
+      els.generateSummary.textContent = `Generate ${count ? fmtInt(count) : '—'} ${multiTypeLabel(type)} ${unit} for a ${m}-of-${n || '—'} wallet.`;
+    }
+  }
+
+  // ---------- cosigner rows ----------
+  function getCosignerRows() {
+    return $$('.cosigner-row', els.cosignerList);
+  }
+  function renumberCosigners() {
+    const rows = getCosignerRows();
+    rows.forEach((row, i) => {
+      const num = row.querySelector('.cosigner-number');
+      if (num) num.textContent = String(i + 1).padStart(2, '0');
+      const remove = row.querySelector('.remove-cosigner');
+      if (remove) remove.disabled = rows.length <= MIN_COSIGNERS;
+    });
+    els.addCosigner.disabled = rows.length >= MAX_COSIGNERS;
+    updateThresholdLimits();
+  }
+  function updateThresholdLimits() {
+    const n = getCosignerRows().length;
+    els.multiThreshold.max = String(Math.max(1, n));
+    els.multiThresholdOf.textContent = String(n);
+    let value = safeInt(els.multiThreshold.value, 1);
+    if (!Number.isFinite(value) || value < 1) value = 1;
+    if (value > n) value = n;
+    els.multiThreshold.value = String(value);
+    updateSummary();
+  }
+  function addCosignerRow(label = '', key = '') {
+    const rows = getCosignerRows();
+    if (rows.length >= MAX_COSIGNERS) {
+      toast(`A maximum of ${MAX_COSIGNERS} cosigners is supported.`, true);
+      return null;
+    }
+    const row = document.createElement('div');
+    row.className = 'cosigner-row';
+
+    const number = document.createElement('span');
+    number.className = 'cosigner-number';
+    number.textContent = String(rows.length + 1).padStart(2, '0');
+
+    const labelInput = document.createElement('input');
+    labelInput.className = 'cosigner-label';
+    labelInput.type = 'text';
+    labelInput.placeholder = 'Label (optional)';
+    labelInput.maxLength = 40;
+    labelInput.autocomplete = 'off';
+    labelInput.value = label;
+
+    const keyInput = document.createElement('input');
+    keyInput.className = 'cosigner-key mono-input';
+    keyInput.type = 'text';
+    keyInput.placeholder = 'xpub6… / ypub6… / zpub6… / tpub…';
+    keyInput.spellcheck = false;
+    keyInput.autocomplete = 'off';
+    keyInput.value = key;
+
+    const remove = document.createElement('button');
+    remove.className = 'remove-cosigner';
+    remove.type = 'button';
+    remove.setAttribute('aria-label', 'Remove cosigner');
+    remove.textContent = '×';
+    remove.addEventListener('click', () => {
+      if (getCosignerRows().length <= MIN_COSIGNERS) {
+        toast(`At least ${MIN_COSIGNERS} cosigners are required.`, true);
+        return;
+      }
+      row.remove();
+      renumberCosigners();
+      updateSummary();
+    });
+
+    keyInput.addEventListener('change', syncNetworkFromKeys);
+    keyInput.addEventListener('blur', syncNetworkFromKeys);
+    keyInput.addEventListener('input', updateSummary);
+    labelInput.addEventListener('input', updateSummary);
+
+    row.append(number, labelInput, keyInput, remove);
+    els.cosignerList.appendChild(row);
+    renumberCosigners();
+    updateSummary();
+    return row;
+  }
+  function fillCosigners(items, threshold) {
+    els.cosignerList.replaceChildren();
+    const list = Array.isArray(items) ? items : [];
+    const normalized = list.slice(0, MAX_COSIGNERS).map((item) => {
+      if (typeof item === 'string') return { label: '', key: item };
+      if (item && typeof item === 'object') {
+        return { label: item.label || item.name || '', key: item.xpub || item.key || item.extendedPublicKey || '' };
+      }
+      return { label: '', key: '' };
+    });
+    while (normalized.length < MIN_COSIGNERS) normalized.push({ label: '', key: '' });
+    normalized.forEach(item => addCosignerRow(item.label, item.key));
+    renumberCosigners();
+    if (threshold != null) {
+      els.multiThreshold.value = String(Math.max(1, Math.min(normalized.length, safeInt(threshold, 1))));
+    }
+    updateThresholdLimits();
+  }
+
+  // ---------- file import ----------
+  function readFileText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Could not read the selected file.'));
+      reader.readAsText(file);
+    });
+  }
+  function extractXpubs(text) {
+    const re = /\b(?:xpub|ypub|zpub|Ypub|Zpub|tpub|upub|vpub|Upub|Vpub)[1-9A-HJ-NP-Za-km-z]{20,}\b/g;
+    const found = [];
+    for (const match of text.matchAll(re)) {
+      if (!found.includes(match[0])) found.push(match[0]);
+    }
+    return found.slice(0, MAX_COSIGNERS * 2);
+  }
+  function labelForKey(text, key) {
+    const lines = text.split(/\r?\n/);
+    const line = lines.find(l => l.includes(key)) || '';
+    let before = line.slice(0, line.indexOf(key)).trim();
+    before = before.replace(/^[#*+\-–—\d.)\s]+/, '').replace(/[:=]\s*$/, '').trim();
+    before = before.replace(/\b(cosigner|key|xpub|extended public key)\b/ig, '').replace(/[:=–—-]\s*$/, '').trim();
+    return before.slice(0, 40);
+  }
+  function findMnemonic(text) {
+    const candidates = [];
+    const lines = text.split(/\r?\n/);
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      const colon = trimmed.indexOf(':');
+      if (colon >= 0) candidates.push(trimmed.slice(colon + 1).trim());
+      candidates.push(trimmed);
+    }
+    candidates.push(text.trim());
+    for (const candidate of candidates) {
+      const normalized = candidate.toLowerCase().normalize('NFKD').replace(/\s+/g, ' ').trim();
+      const count = normalized.split(' ').length;
+      if (![12, 15, 18, 21, 24].includes(count)) continue;
+      try { C.validateMnemonic(normalized); return normalized; } catch (_) { /* keep looking */ }
+    }
+    if (text.length > 8000) return null;
+    const tokens = text.toLowerCase().normalize('NFKD').replace(/[^a-z]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+    if (tokens.length > 2400) return null;
+    for (const n of [24, 21, 18, 15, 12]) {
+      for (let i = 0; i + n <= tokens.length; i++) {
+        const candidate = tokens.slice(i, i + n).join(' ');
+        try { C.validateMnemonic(candidate); return candidate; } catch (_) { /* keep looking */ }
+      }
+    }
+    return null;
+  }
+  function normalizeType(value, multisig = false) {
+    const v = String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+    if (!v) return null;
+    if (['taproot', 'p2tr', 'bech32m', '86'].includes(v)) return 'taproot';
+    if (['legacy', 'p2pkh', 'p2sh', '44', '45', '48', '0'].includes(v)) return 'legacy';
+    if (['nested', 'p2shp2wpkh', 'p2shp2wsh', '49', '1'].includes(v)) return 'nested';
+    if (['native', 'segwit', 'p2wpkh', 'p2wsh', 'bech32', '84', '2'].includes(v)) return 'native';
+    return null;
+  }
+  function setIfPresent(el, value) {
+    if (value === undefined || value === null) return;
+    el.value = String(value);
+  }
+  function applyJsonConfig(config) {
+    if (Array.isArray(config)) {
+      const keys = config.map(item => typeof item === 'string' ? item : (item && (item.xpub || item.key)) || '').filter(Boolean);
+      if (!keys.length) throw new Error('The JSON array did not contain any xpubs.');
+      fillCosigners(keys);
+      setMode('multi');
+      return;
+    }
+    if (!config || typeof config !== 'object') throw new Error('The JSON file must contain an object or an array of xpubs.');
+
+    let mode = String(config.mode || config.walletType || '').toLowerCase();
+    const xpubs = [];
+    if (Array.isArray(config.cosigners)) {
+      for (const item of config.cosigners) {
+        if (typeof item === 'string') xpubs.push({ label: '', key: item });
+        else if (item && typeof item === 'object') xpubs.push({ label: item.label || item.name || '', key: item.xpub || item.key || '' });
+      }
+    }
+    if (Array.isArray(config.xpubs)) {
+      for (const item of config.xpubs) {
+        if (typeof item === 'string') xpubs.push({ label: '', key: item });
+        else if (item && typeof item === 'object') xpubs.push({ label: item.label || item.name || '', key: item.xpub || item.key || '' });
+      }
+    }
+    if (typeof config.xpub === 'string') xpubs.push({ label: config.label || '', key: config.xpub });
+    if (typeof config.accountXpub === 'string') xpubs.push({ label: config.label || '', key: config.accountXpub });
+    if (typeof config.mnemonic === 'string' || typeof config.recoveryPhrase === 'string') {
+      setMode('single');
+      setRadio('singleSource', 'mnemonic');
+      els.singleMnemonic.value = String(config.mnemonic || config.recoveryPhrase);
+      if (config.passphrase) els.singlePassphrase.value = String(config.passphrase);
+    } else if (xpubs.length === 1) {
+      setMode('single');
+      setRadio('singleSource', 'xpub');
+      els.singleXpub.value = xpubs[0].key;
+    } else if (xpubs.length > 1) {
+      setMode('multi');
+      fillCosigners(xpubs, config.threshold ?? config.m ?? Math.min(2, xpubs.length));
+    }
+
+    if (config.network && ['mainnet', 'testnet'].includes(String(config.network).toLowerCase())) {
+      els.networkSelect.value = String(config.network).toLowerCase();
+    }
+    if (config.addressType || config.type) {
+      const type = normalizeType(config.addressType || config.type, state.mode === 'multi');
+      if (type) setRadio(state.mode === 'single' ? 'singleType' : 'multiType', type);
+    }
+    setIfPresent(els.singleAccount, config.account);
+    setIfPresent(els.multiAccount, config.account);
+    setIfPresent(els.singleChain, config.chain);
+    setIfPresent(els.multiChain, config.chain);
+    setIfPresent(els.singleStart, config.start ?? config.startIndex);
+    setIfPresent(els.multiStart, config.start ?? config.startIndex);
+    setIfPresent(els.singleCount, config.count);
+    setIfPresent(els.multiCount, config.count);
+    if (config.threshold !== undefined || config.m !== undefined) {
+      setIfPresent(els.multiThreshold, config.threshold ?? config.m);
+    }
+    if (config.sorted !== undefined || config.bip67 !== undefined) {
+      els.multiSorted.checked = Boolean(config.sorted ?? config.bip67);
+    }
+    const customPath = config.path || config.derivationPath || config.pathTemplate;
+    if (customPath) {
+      if (state.mode === 'single') {
+        els.singleCustomToggle.checked = true;
+        els.singleCustomWrap.hidden = false;
+        els.singleCustomPath.value = String(customPath);
+      } else {
+        els.multiCustomToggle.checked = true;
+        els.multiCustomWrap.hidden = false;
+        els.multiCustomPath.value = String(customPath);
+      }
+    }
+    updateSingleSource();
+    updateThresholdLimits();
+    updatePaths();
+    updateSummary();
+  }
+  function importWalletText(text, filename) {
+    const raw = String(text || '').replace(/^\uFEFF/, '').trim();
+    if (!raw) throw new Error('The selected file is empty.');
+    if (raw.length > 1024 * 1024) throw new Error('The selected file is larger than 1 MB.');
+    els.importNote.textContent = `Loaded ${filename}. Read locally; nothing was uploaded.`;
+
+    if (raw.startsWith('{') || raw.startsWith('[')) {
+      let config;
+      try { config = JSON.parse(raw); }
+      catch (err) { throw new Error('The JSON file could not be parsed: ' + err.message); }
+      applyJsonConfig(config);
+      updateSingleSource();
+      updatePaths();
+      updateSummary();
+      toast(`Loaded configuration from ${filename}.`);
+      return;
+    }
+
+    const xpubs = extractXpubs(raw);
+    const mnemonic = findMnemonic(raw);
+    if (!xpubs.length && !mnemonic) {
+      throw new Error('No extended public keys or valid BIP39 recovery phrase were found in the file.');
+    }
+
+    if (state.mode === 'multi' && xpubs.length >= 2) {
+      const items = xpubs.map(key => ({ label: labelForKey(raw, key), key }));
+      fillCosigners(items, Math.min(2, items.length));
+      setMode('multi');
+      toast(`Loaded ${xpubs.length} cosigner xpubs from ${filename}.`);
+      return;
+    }
+    if (mnemonic) {
+      setMode('single');
+      setRadio('singleSource', 'mnemonic');
+      els.singleMnemonic.value = mnemonic;
+      updateSingleSource();
+      updatePaths();
+      toast(`Loaded a BIP39 recovery phrase from ${filename}.`);
+      return;
+    }
+    if (xpubs.length >= 2) {
+      const items = xpubs.map(key => ({ label: labelForKey(raw, key), key }));
+      fillCosigners(items, Math.min(2, items.length));
+      setMode('multi');
+      toast(`Loaded ${xpubs.length} cosigner xpubs from ${filename}.`);
+      return;
+    }
+    setMode('single');
+    setRadio('singleSource', 'xpub');
+    els.singleXpub.value = xpubs[0];
+    updateSingleSource();
+    updatePaths();
+    toast(`Loaded one extended public key from ${filename}.`);
+  }
+  async function handleFile(file) {
+    if (!file) return;
+    try {
+      clearError();
+      const text = await readFileText(file);
+      importWalletText(text, file.name);
+      if (state.mode === 'single') syncNetworkFromKeys();
+    } catch (err) {
+      showError(err.message || String(err));
+      toast(err.message || String(err), true);
+    } finally {
+      els.fileInput.value = '';
+    }
+  }
+
+  // ---------- network sync ----------
+  function syncNetworkFromKeys() {
+    const keys = state.mode === 'single'
+      ? [els.singleXpub.value.trim()].filter(Boolean)
+      : getCosignerRows().map(row => row.querySelector('.cosigner-key').value.trim()).filter(Boolean);
+    const networks = new Set();
+    for (const key of keys) {
+      try { networks.add(C.parseExtendedPublicKey(key).network); } catch (_) { /* ignore while typing */ }
+    }
+    if (networks.size === 1) {
+      const detected = [...networks][0];
+      if (els.networkSelect.value !== detected) {
+        els.networkSelect.value = detected;
+        updatePaths();
+        updateSummary();
+        toast(`Network set to ${networkLabel(detected)} based on the extended key.`);
+      }
+    }
+  }
+
+  // ---------- validation ----------
+  function requireInt(el, label, min, max) {
+    const raw = String(el.value).trim();
+    if (!/^\d+$/.test(raw)) throw new Error(`${label} must be a whole number between ${fmtInt(min)} and ${fmtInt(max)}.`);
+    const value = Number(raw);
+    if (!Number.isSafeInteger(value) || value < min || value > max) {
+      throw new Error(`${label} must be a whole number between ${fmtInt(min)} and ${fmtInt(max)}.`);
+    }
+    return value;
+  }
+  function validateRange(start, count) {
+    if (count < 1 || count > MAX_ADDRESSES) throw new Error(`Number of addresses must be between 1 and ${fmtInt(MAX_ADDRESSES)}.`);
+    if (start + count - 1 > 0x7fffffff) throw new Error('The requested address range exceeds the BIP32 index limit (2,147,483,647).');
+  }
+  function parseTemplateOrThrow(path) {
+    try { return C.parsePathTemplate(path); }
+    catch (err) { throw new Error('Derivation path: ' + err.message); }
+  }
+  function ensureXpubNetwork(xpub, network, label) {
+    if (xpub.network !== network) {
+      throw new Error(`${label || 'Extended key'} is a ${networkLabel(xpub.network)} key, but the selected network is ${networkLabel(network)}. Change the network selector or load a ${networkLabel(network)} key.`);
+    }
+  }
+
+  // ---------- derivation helpers ----------
+  function derivePublicPrefix(xpub, prefix, label) {
+    if (xpub.depth > prefix.length) {
+      throw new Error(`${label || 'Extended key'} is at depth ${xpub.depth}, but the supplied path only has ${prefix.length} components before {i}. Use a matching path or a less deep xpub.`);
+    }
+    let node = xpub;
+    for (let i = xpub.depth; i < prefix.length; i++) {
+      const component = prefix[i];
+      if (component >= 0x80000000) {
+        throw new Error(`${label || 'Extended key'} cannot derive hardened component /${(component - 0x80000000)}' from an xpub. Export the key deeper (for multisig, usually at the script-level path) or use a non-hardened custom path.`);
+      }
+      node = C.publicChild(node, component);
+    }
+    return node;
+  }
+  function derivePublicSuffix(node, index, suffix, label) {
+    let child = C.publicChild(node, index);
+    for (const component of suffix) {
+      if (component >= 0x80000000) {
+        throw new Error(`${label || 'Extended key'} cannot derive a hardened component after the address index from an xpub.`);
+      }
+      child = C.publicChild(child, component);
+    }
+    return child;
+  }
+  function derivePrivatePath(node, components) {
+    let current = node;
+    for (const component of components) current = C.privateChild(current, component);
+    return current;
+  }
+
+  // ---------- generation ----------
+  class CancelError extends Error {}
+
+  async function generateSingle() {
+    const source = radioValue('singleSource') || 'xpub';
+    const type = radioValue('singleType') || 'native';
+    const network = getNetwork();
+    const account = requireInt(els.singleAccount, 'Account', 0, 0x7fffffff);
+    const chain = els.singleChain.value === '1' ? 1 : 0;
+    const start = requireInt(els.singleStart, 'Start index', 0, 0x7fffffff);
+    const count = requireInt(els.singleCount, 'Number of addresses', 1, MAX_ADDRESSES);
+    validateRange(start, count);
+    void account;
+
+    const pathText = (els.singleCustomToggle.checked ? els.singleCustomPath.value : singleDefaultPath()).trim();
+    if (!pathText) throw new Error('Derivation path is empty.');
+    const template = parseTemplateOrThrow(pathText);
+    const prefix = C.pathPrefix(template);
+    const suffix = C.pathSuffix(template);
+
+    let childAt;
+    let sourceLabel;
+
+    if (source === 'mnemonic') {
+      const phrase = els.singleMnemonic.value.trim();
+      if (!phrase) throw new Error('Enter a BIP39 recovery phrase, or switch to an account xpub.');
+      setProgress(1, 'Checking recovery phrase…');
+      await tick();
+      let mnemonic;
+      try { mnemonic = C.validateMnemonic(phrase); }
+      catch (err) { throw new Error('Recovery phrase: ' + err.message); }
+      setProgress(3, 'Deriving BIP39 seed (PBKDF2, 2,048 rounds)…');
+      await tick();
+      const seed = C.mnemonicToSeed(mnemonic, els.singlePassphrase.value);
+      setProgress(8, 'Deriving account path…');
+      await tick();
+      const root = C.masterFromSeed(seed);
+      let node;
+      try { node = derivePrivatePath(root, prefix); }
+      catch (err) { throw new Error('Derivation path: ' + err.message); }
+      childAt = (index) => {
+        let child = C.privateChild(node, index);
+        for (const component of suffix) child = C.privateChild(child, component);
+        return C.publicNodeFromPrivate(child);
+      };
+      sourceLabel = 'BIP39 recovery phrase';
+    } else {
+      const xpubText = els.singleXpub.value.trim();
+      if (!xpubText) throw new Error('Enter an account-level extended public key, or switch to a recovery phrase.');
+      const matches = extractXpubs(xpubText);
+      if (matches.length > 1) throw new Error('Single-signature mode accepts exactly one xpub. Use multisig mode for multiple cosigner keys.');
+      setProgress(2, 'Parsing extended public key…');
+      await tick();
+      let xpub;
+      try { xpub = C.parseExtendedPublicKey(xpubText); }
+      catch (err) { throw new Error('Extended public key: ' + err.message); }
+      ensureXpubNetwork(xpub, network, 'Account xpub');
+      setProgress(5, 'Deriving change-level public key…');
+      await tick();
+      let node;
+      try { node = derivePublicPrefix(xpub, prefix, 'Account xpub'); }
+      catch (err) { throw new Error(err.message); }
+      childAt = (index) => {
+        try { return derivePublicSuffix(node, index, suffix, 'Account xpub'); }
+        catch (err) { throw new Error(err.message); }
+      };
+      sourceLabel = 'Account xpub';
+    }
+
+    const results = [];
+    const startedAt = performance.now();
+    for (let i = 0; i < count; i++) {
+      if (state.cancel) throw new CancelError('Generation cancelled.');
+      const index = start + i;
+      let pub;
+      try { pub = childAt(index); }
+      catch (err) { throw new Error(`Address ${index}: ${err.message}`); }
+      const address = C.singleAddress(type, pub.pubkey, pub.point, network);
+      results.push({ index, address, path: C.pathForIndex(template, index) });
+      if (i % 20 === 19 || i === count - 1) {
+        const pct = 10 + ((i + 1) / count) * 88;
+        setProgress(pct, `Deriving addresses… ${fmtInt(i + 1)} / ${fmtInt(count)}`);
+        await tick();
+      }
+    }
+
+    const elapsed = performance.now() - startedAt;
+    return {
+      results,
+      meta: {
+        mode: 'single',
+        network,
+        type,
+        typeLabel: typeLabel(type),
+        source: source,
+        sourceLabel,
+        count,
+        start,
+        end: start + count - 1,
+        pathTemplate: pathText,
+        generatedAt: new Date().toISOString(),
+        elapsedMs: elapsed,
+        account,
+        chain,
+        walletLabel: 'Single signature'
+      }
+    };
+  }
+
+  async function generateMultisig() {
+    const type = radioValue('multiType') || 'native';
+    const network = getNetwork();
+    const account = requireInt(els.multiAccount, 'Account', 0, 0x7fffffff);
+    const chain = els.multiChain.value === '1' ? 1 : 0;
+    const start = requireInt(els.multiStart, 'Start index', 0, 0x7fffffff);
+    const count = requireInt(els.multiCount, 'Number of addresses', 1, MAX_ADDRESSES);
+    validateRange(start, count);
+
+    const rows = getCosignerRows();
+    if (rows.length < MIN_COSIGNERS || rows.length > MAX_COSIGNERS) {
+      throw new Error(`Multisig requires between ${MIN_COSIGNERS} and ${MAX_COSIGNERS} cosigner xpubs.`);
+    }
+    const threshold = requireInt(els.multiThreshold, 'Required signatures', 1, rows.length);
+    const labels = [];
+    const keyTexts = [];
+    for (let i = 0; i < rows.length; i++) {
+      const label = rows[i].querySelector('.cosigner-label').value.trim();
+      const key = rows[i].querySelector('.cosigner-key').value.trim();
+      if (!key) throw new Error(`Cosigner ${i + 1} has no extended public key.`);
+      if (keyTexts.includes(key)) throw new Error(`Cosigner ${i + 1} duplicates another cosigner key.`);
+      labels.push(label || `Cosigner ${i + 1}`);
+      keyTexts.push(key);
+    }
+
+    const pathText = (els.multiCustomToggle.checked ? els.multiCustomPath.value : multiDefaultPath()).trim();
+    if (!pathText) throw new Error('Derivation path is empty.');
+    const template = parseTemplateOrThrow(pathText);
+    const prefix = C.pathPrefix(template);
+    const suffix = C.pathSuffix(template);
+
+    setProgress(2, 'Parsing cosigner xpubs…');
+    await tick();
+    const nodes = [];
+    for (let i = 0; i < keyTexts.length; i++) {
+      let xpub;
+      try { xpub = C.parseExtendedPublicKey(keyTexts[i]); }
+      catch (err) { throw new Error(`Cosigner ${i + 1}: ${err.message}`); }
+      ensureXpubNetwork(xpub, network, `Cosigner ${i + 1}`);
+      try { nodes.push(derivePublicPrefix(xpub, prefix, `Cosigner ${i + 1}`)); }
+      catch (err) { throw new Error(err.message); }
+    }
+
+    const results = [];
+    const startedAt = performance.now();
+    for (let i = 0; i < count; i++) {
+      if (state.cancel) throw new CancelError('Generation cancelled.');
+      const index = start + i;
+      const pubkeys = [];
+      for (let j = 0; j < nodes.length; j++) {
+        let child;
+        try { child = derivePublicSuffix(nodes[j], index, suffix, `Cosigner ${j + 1}`); }
+        catch (err) { throw new Error(`Address ${index}: ${err.message}`); }
+        pubkeys.push(child.pubkey);
+      }
+      const address = C.multisigAddress(type, pubkeys, threshold, els.multiSorted.checked, network);
+      results.push({ index, address, path: C.pathForIndex(template, index) });
+      if (i % 20 === 19 || i === count - 1) {
+        const pct = 10 + ((i + 1) / count) * 88;
+        setProgress(pct, `Deriving multisig addresses… ${fmtInt(i + 1)} / ${fmtInt(count)}`);
+        await tick();
+      }
+    }
+
+    const elapsed = performance.now() - startedAt;
+    return {
+      results,
+      meta: {
+        mode: 'multi',
+        network,
+        type,
+        typeLabel: multiTypeLabel(type),
+        source: 'xpubs',
+        sourceLabel: `${rows.length} cosigner xpubs`,
+        count,
+        start,
+        end: start + count - 1,
+        pathTemplate: pathText,
+        generatedAt: new Date().toISOString(),
+        elapsedMs: elapsed,
+        account,
+        chain,
+        threshold,
+        cosignerCount: rows.length,
+        cosignerLabels: labels,
+        sorted: els.multiSorted.checked,
+        walletLabel: `${threshold}-of-${rows.length} multisig`
+      }
+    };
+  }
+
+  async function handleGenerate(event) {
+    event.preventDefault();
+    if (state.generating) return;
+    clearError();
+    state.cancel = false;
+    state.results = [];
+    state.meta = null;
+    els.resultsSection.hidden = true;
+    els.resultsBody.replaceChildren();
+    setGenerating(true);
+    setProgress(0, 'Preparing…');
+    await tick();
+    try {
+      const output = state.mode === 'single' ? await generateSingle() : await generateMultisig();
+      state.results = output.results;
+      state.meta = output.meta;
+      setProgress(100, `Generated ${fmtInt(output.results.length)} addresses in ${fmtDuration(output.meta.elapsedMs)}.`);
+      renderResults();
+      toast(`Generated ${fmtInt(output.results.length)} addresses.`);
+    } catch (err) {
+      if (err instanceof CancelError) {
+        hideProgress();
+        toast('Generation cancelled. No addresses were generated.');
+      } else {
+        hideProgress();
+        const message = err && err.message ? err.message : String(err);
+        showError(message);
+        els.formError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  // ---------- results ----------
+  function addChip(text, accent = false) {
+    const span = document.createElement('span');
+    span.textContent = text;
+    if (accent) span.className = 'accent';
+    els.resultMeta.appendChild(span);
+  }
+  function renderResults() {
+    const { results, meta } = state;
+    els.resultMeta.replaceChildren();
+    addChip(networkLabel(meta.network));
+    addChip(meta.typeLabel);
+    addChip(walletTypeLabel(meta));
+    addChip(`${fmtInt(results.length)} addresses`, true);
+
+    const details = [`Path template: ${meta.pathTemplate}`, `Range: ${fmtInt(meta.start)}–${fmtInt(meta.end)}`, `Source: ${meta.sourceLabel}`];
+    if (meta.mode === 'multi') {
+      details.push(meta.sorted ? 'BIP67 sorted keys' : 'Cosigner order (not sorted)');
+      const named = meta.cosignerLabels.filter((label, i) => label !== `Cosigner ${i + 1}`);
+      if (named.length) details.push(`Cosigners: ${meta.cosignerLabels.join(', ')}`);
+    }
+    els.resultNote.textContent = details.join('  ·  ');
+
+    const fragment = document.createDocumentFragment();
+    const preview = results.slice(0, RESULT_PREVIEW);
+    for (const row of preview) {
+      const tr = document.createElement('tr');
+      const indexTd = document.createElement('td');
+      indexTd.textContent = String(row.index);
+      const pathTd = document.createElement('td');
+      pathTd.className = 'path-cell';
+      pathTd.textContent = row.path;
+      const addressTd = document.createElement('td');
+      addressTd.className = 'address-cell';
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.address = row.address;
+      button.title = 'Click to copy this address';
+      button.textContent = row.address;
+      addressTd.appendChild(button);
+      tr.append(indexTd, pathTd, addressTd);
+      fragment.appendChild(tr);
+    }
+    els.resultsBody.replaceChildren(fragment);
+    els.previewNote.textContent = results.length > RESULT_PREVIEW
+      ? `Showing the first ${fmtInt(RESULT_PREVIEW)} of ${fmtInt(results.length)} addresses. Download, copy, or print the complete list.`
+      : `Showing all ${fmtInt(results.length)} generated ${results.length === 1 ? 'address' : 'addresses'}. Click an address to copy it.`;
+    els.resultsSection.hidden = false;
+    els.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ---------- export / copy / print ----------
+  function exportHeaderLines(meta) {
+    const lines = [
+      'DontTrustVerifyAddresses — Bitcoin address export',
+      `Generated: ${meta.generatedAt}`,
+      `Network: ${networkLabel(meta.network)}`,
+      `Wallet: ${walletTypeLabel(meta)}`,
+      `Address format: ${meta.typeLabel}`,
+      `Derivation: ${meta.pathTemplate}`,
+      `Range: ${meta.start}–${meta.end} (${fmtInt(meta.count)} addresses)`,
+      `Source: ${meta.sourceLabel}`
+    ];
+    if (meta.mode === 'multi') {
+      lines.push(`Keys sorted: ${meta.sorted ? 'yes (BIP67)' : 'no (cosigner order)'}`);
+      const named = meta.cosignerLabels.some((label, i) => label !== `Cosigner ${i + 1}`);
+      if (named) lines.push(`Cosigners: ${meta.cosignerLabels.join(', ')}`);
+    }
+    lines.push('', 'PRIVATE — addresses and xpubs are sensitive, not secret. Keep this file private.');
+    return lines;
+  }
+  function buildExportText(format) {
+    if (!state.results.length || !state.meta) return '';
+    const rows = state.results;
+    if (format === 'plain') return rows.map(row => row.address).join('\n') + '\n';
+    if (format === 'csv') {
+      const csv = ['index,path,address'];
+      for (const row of rows) {
+        csv.push(`${row.index},${row.path},${row.address}`);
+      }
+      return csv.join('\n') + '\n';
+    }
+    const lines = exportHeaderLines(state.meta);
+    lines.push('', '#\tADDRESS');
+    for (const row of rows) lines.push(`${row.index}\t${row.address}`);
+    return lines.join('\n') + '\n';
+  }
+  function exportFilename(format) {
+    const meta = state.meta;
+    const ext = format === 'csv' ? 'csv' : 'txt';
+    const kind = meta.mode === 'multi'
+      ? `${meta.threshold}of${meta.cosignerCount}-${meta.type}`
+      : `single-${meta.type}`;
+    return `DontTrustVerifyAddresses-${meta.network}-${kind}-${meta.start}-${meta.end}.${ext}`;
+  }
+  function downloadExport() {
+    if (!state.results.length) return;
+    const format = els.exportFormat.value;
+    const text = buildExportText(format);
+    const blob = new Blob([text], { type: format === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = exportFilename(format);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    toast(`Downloaded ${fmtInt(state.results.length)} addresses as ${format === 'csv' ? 'CSV' : format === 'plain' ? 'plain text' : 'numbered text'}.`);
+  }
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    ta.style.top = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+  async function copyText(text) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (_) { /* fall back */ }
+    return fallbackCopy(text);
+  }
+  async function copyAddresses() {
+    if (!state.results.length) return;
+    const text = state.results.map(row => row.address).join('\n');
+    const ok = await copyText(text);
+    toast(ok ? `Copied ${fmtInt(state.results.length)} addresses to the clipboard.` : 'Clipboard access was blocked by the browser.', !ok);
+  }
+  function printAddresses() {
+    if (!state.results.length) return;
+    const text = buildExportText('numbered');
+    const title = 'DontTrustVerifyAddresses — ' + state.meta.walletLabel;
+    const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
+<style>
+  @page { margin: 12mm; }
+  body { margin: 0; color: #111; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 9.5pt; line-height: 1.35; }
+  h1 { margin: 0 0 4px; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 16pt; letter-spacing: -0.03em; }
+  .warn { margin: 0 0 10px; padding: 6px 8px; border: 1px solid #c2410c; background: #fff7ed; color: #7c2d12; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 8.5pt; }
+  pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  @media print { .noprint { display: none; } }
+</style></head><body>
+<h1>${escapeHtml(title)}</h1>
+<div class="warn">PRIVATE — addresses and xpubs are sensitive, not secret. Keep this printed list private.</div>
+<pre>${escapeHtml(text)}</pre>
+<script>setTimeout(function(){ try { window.print(); } catch (e) {} }, 180);<\/script>
+</body></html>`;
+    const win = window.open('', '_blank');
+    if (!win) {
+      toast('The print window was blocked. Download the text file and print it instead.', true);
+      return;
+    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+  }
+
+  // ---------- clear / demo ----------
+  function clearAll() {
+    if (!window.confirm('Clear all inputs and generated addresses? Anything you loaded will be removed from this page.')) return;
+    els.walletForm.reset();
+    els.singleXpub.value = '';
+    els.singleMnemonic.value = '';
+    els.singlePassphrase.value = '';
+    els.singleAccount.value = '0';
+    els.singleChain.value = '0';
+    els.singleStart.value = '0';
+    els.singleCount.value = '100';
+    els.singleCustomToggle.checked = false;
+    els.singleCustomWrap.hidden = true;
+    els.singleCustomPath.value = "m/84'/0'/0'/0/{i}";
+    els.multiAccount.value = '0';
+    els.multiChain.value = '0';
+    els.multiStart.value = '0';
+    els.multiCount.value = '100';
+    els.multiThreshold.value = '2';
+    els.multiSorted.checked = true;
+    els.multiCustomToggle.checked = false;
+    els.multiCustomWrap.hidden = true;
+    els.multiCustomPath.value = "m/48'/0'/0'/2'/0/{i}";
+    els.networkSelect.value = 'mainnet';
+    setRadio('singleSource', 'xpub');
+    setRadio('singleType', 'native');
+    setRadio('multiType', 'native');
+    els.cosignerList.replaceChildren();
+    addCosignerRow();
+    addCosignerRow();
+    state.results = [];
+    state.meta = null;
+    els.resultsSection.hidden = true;
+    els.resultsBody.replaceChildren();
+    els.importNote.textContent = 'Wallet files are read locally. Supports plain text xpubs, a BIP39 backup file, or a JSON configuration.';
+    clearError();
+    hideProgress();
+    setMode('single');
+    updateSingleSource();
+    updatePaths();
+    updateSummary();
+    toast('All inputs and generated addresses cleared from the page.');
+  }
+  function loadDemo() {
+    setMode('single');
+    setRadio('singleSource', 'mnemonic');
+    setRadio('singleType', 'taproot');
+    els.networkSelect.value = 'mainnet';
+    els.singleMnemonic.value = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+    els.singlePassphrase.value = '';
+    els.singleAccount.value = '0';
+    els.singleChain.value = '0';
+    els.singleStart.value = '0';
+    els.singleCount.value = '3';
+    els.singleCustomToggle.checked = false;
+    els.singleCustomWrap.hidden = true;
+    updateSingleSource();
+    updatePaths();
+    updateSummary();
+    toast('Public BIP86 test vector loaded. The first address should be bc1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqkedrcr.');
+    els.singleMnemonic.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // ---------- event wiring ----------
+  els.tabSingle.addEventListener('click', () => setMode('single'));
+  els.tabMulti.addEventListener('click', () => setMode('multi'));
+  els.networkSelect.addEventListener('change', () => {
+    updatePaths();
+    updateSummary();
+  });
+  els.importButton.addEventListener('click', () => els.fileInput.click());
+  els.fileInput.addEventListener('change', (event) => handleFile(event.target.files && event.target.files[0]));
+
+  $$('input[name="singleSource"]').forEach(el => el.addEventListener('change', () => {
+    updateSingleSource();
+    updateSummary();
+  }));
+  $$('input[name="singleType"]').forEach(el => el.addEventListener('change', () => {
+    updateSinglePath();
+    updateSummary();
+  }));
+  $$('input[name="multiType"]').forEach(el => el.addEventListener('change', () => {
+    updateMultiPath();
+    updateSummary();
+  }));
+  [els.singleAccount, els.singleChain, els.singleStart, els.singleCount].forEach(el => {
+    el.addEventListener('input', () => { updateSinglePath(); updateSummary(); });
+    el.addEventListener('change', () => { updateSinglePath(); updateSummary(); });
+  });
+  [els.multiAccount, els.multiChain, els.multiStart, els.multiCount].forEach(el => {
+    el.addEventListener('input', () => { updateMultiPath(); updateSummary(); });
+    el.addEventListener('change', () => { updateMultiPath(); updateSummary(); });
+  });
+  els.singleXpub.addEventListener('change', syncNetworkFromKeys);
+  els.singleXpub.addEventListener('blur', syncNetworkFromKeys);
+  els.singleXpub.addEventListener('input', updateSummary);
+
+  els.singleCustomToggle.addEventListener('change', () => {
+    els.singleCustomWrap.hidden = !els.singleCustomToggle.checked;
+    if (els.singleCustomToggle.checked && !els.singleCustomPath.value.trim()) {
+      els.singleCustomPath.value = singleDefaultPath();
+    }
+    updateSinglePath();
+  });
+  els.singleCustomPath.addEventListener('input', updateSinglePath);
+  els.singleResetPath.addEventListener('click', () => {
+    els.singleCustomToggle.checked = false;
+    els.singleCustomWrap.hidden = true;
+    els.singleCustomPath.value = singleDefaultPath();
+    updateSinglePath();
+    toast('Derivation path reset to the default.');
+  });
+
+  els.multiCustomToggle.addEventListener('change', () => {
+    els.multiCustomWrap.hidden = !els.multiCustomToggle.checked;
+    if (els.multiCustomToggle.checked && !els.multiCustomPath.value.trim()) {
+      els.multiCustomPath.value = multiDefaultPath();
+    }
+    updateMultiPath();
+  });
+  els.multiCustomPath.addEventListener('input', updateMultiPath);
+  els.multiResetPath.addEventListener('click', () => {
+    els.multiCustomToggle.checked = false;
+    els.multiCustomWrap.hidden = true;
+    els.multiCustomPath.value = multiDefaultPath();
+    updateMultiPath();
+    toast('Derivation path reset to the default.');
+  });
+
+  els.addCosigner.addEventListener('click', () => {
+    addCosignerRow();
+    const rows = getCosignerRows();
+    if (rows.length) {
+      const input = rows[rows.length - 1].querySelector('.cosigner-key');
+      if (input) input.focus();
+    }
+  });
+  els.multiThreshold.addEventListener('input', () => {
+    const n = getCosignerRows().length;
+    let value = safeInt(els.multiThreshold.value, 1);
+    if (value < 1) value = 1;
+    if (value > n) value = n;
+    els.multiThreshold.value = String(value);
+    updateSummary();
+  });
+  els.multiSorted.addEventListener('change', updateSummary);
+  els.walletForm.addEventListener('submit', handleGenerate);
+  els.cancelBtn.addEventListener('click', () => {
+    state.cancel = true;
+    els.cancelBtn.disabled = true;
+    els.cancelBtn.textContent = 'Cancelling…';
+    setProgress(Number.parseFloat(els.progressPct.textContent) || 0, 'Cancelling…');
+  });
+
+  els.downloadBtn.addEventListener('click', downloadExport);
+  els.copyBtn.addEventListener('click', copyAddresses);
+  els.printBtn.addEventListener('click', printAddresses);
+  els.resultsBody.addEventListener('click', async (event) => {
+    const button = event.target.closest('button[data-address]');
+    if (!button) return;
+    const ok = await copyText(button.dataset.address);
+    toast(ok ? 'Address copied to the clipboard.' : 'Clipboard access was blocked by the browser.', !ok);
+  });
+  els.demoBtn.addEventListener('click', loadDemo);
+  els.clearBtn.addEventListener('click', clearAll);
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.generating) {
+      state.cancel = true;
+      els.cancelBtn.disabled = true;
+      els.cancelBtn.textContent = 'Cancelling…';
+    }
+  });
+
+  // ---------- boot ----------
+  addCosignerRow();
+  addCosignerRow();
+  setMode('single');
+  updateThresholdLimits();
+  updatePaths();
+  updateSummary();
+  hideProgress();
+})();
+
+</script>
+</body>
+</html>
